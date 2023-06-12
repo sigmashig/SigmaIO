@@ -24,13 +24,13 @@ SigmaIO::~SigmaIO()
 
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
 {
-    for (auto it : interruptMap)
+    for (auto itIsr : interruptMap)
     {
-        if (it.first == pinIsr)
+        if (itIsr.first == pinIsr)
         {
-            for (auto it2 : it.second.pinSrcMap)
+            for (auto itSrc : itIsr.second->pinSrcMap)
             {
-                DetachInterrupt(pinIsr, it2.first);
+                DetachInterrupt(pinIsr, itSrc.first);
             }
         }
     }
@@ -200,42 +200,84 @@ IOError SigmaIO::SetPwm(uint pin, uint value)
     }
 }
 
+void SigmaIO::checkDeBounced(TimerHandle_t xTimer)
+{
+    Serial.printf("checkDeBounced timer= %d\n", xTimer);
+    for (auto isrIt : sigmaIO->interruptMap)
+    {
+        Serial.printf("checkDeBounced isrIt= %d\n", isrIt.first);
+        for (auto srcIt : isrIt.second->pinSrcMap)
+        {
+            Serial.printf("checkDeBounced srcIt= %d\n", srcIt.first);
+            if (srcIt.second->timer == xTimer)
+            { // Timer found
+                bool val = sigmaIO->DigitalRead(srcIt.first);
+                Serial.printf("checkDeBounced old=%d new=%d\n", srcIt.second->value, val);
+                srcIt.second->isTimerActive = false;
+                if (srcIt.second->value != val)
+                { // The real input value has changed
+                    srcIt.second->value = val;
+
+                    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, srcIt.second, sizeof(PinValue), NULL);
+                }
+            }
+        }
+    }
+}
+
 IOError SigmaIO::AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime, int mode)
 {
     Serial.printf("AttachInterrupt %d %d %d %d\n", pinIsr, pinSrc, debounceTime, mode);
 
-    InterruptDescription isrDescr;
+    InterruptDescription *isrDescr = new InterruptDescription();
     auto it = interruptMap.find(pinIsr);
     if (it == interruptMap.end())
     {
         // New PinIsr
-        bool val = DigitalRead(pinSrc);
-        std::pair<uint, bool> newPairSrc = {pinSrc, val};
-        isrDescr.pinIsr = pinIsr;
-        isrDescr.debounceTime = debounceTime;
-        isrDescr.isEnabled = true;
-        isrDescr.pinSrcMap.insert(newPairSrc);
 
-        std::pair<uint, InterruptDescription> newPair = {pinIsr,isrDescr};
-        interruptMap.insert(newPair);
-        auto x = interruptMap.find(pinIsr);
-        attachInterruptArg(pinIsr, processISR, &(x->second), mode);
-
+        isrDescr->pinIsr = pinIsr;
+        isrDescr->debounceTime = debounceTime;
+        PinValue *pv = new PinValue();
+        pv->pin = pinSrc;
+        pv->value = DigitalRead(pinSrc);
+        pv->isTimerActive = false;
+        if (debounceTime != 0)
+        {
+            pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(isrDescr->debounceTime), pdFALSE, NULL, checkDeBounced);
+        }
+        else
+        {
+            pv->timer = NULL;
+        }
+        isrDescr->pinSrcMap.insert({pinSrc, pv});
+        interruptMap.insert({pinIsr, isrDescr});
+        attachInterruptArg(pinIsr, processISR, isrDescr, mode);
         return SIGMAIO_SUCCESS;
     }
     else
     {
-        auto src = it->second.pinSrcMap.find(pinSrc);
-        if (src != it->second.pinSrcMap.end())
+        auto src = it->second->pinSrcMap.find(pinSrc);
+        if (src != it->second->pinSrcMap.end())
         {
             // PinSrc already attached
             return SIGMAIO_ERROR_INTERRUPT_ALREADY_ATTACHED;
         }
         else
         {
-            bool val = DigitalRead(pinSrc);
-            std::pair<uint, bool> newPair = {pinSrc, val};
-            it->second.pinSrcMap.insert(newPair);
+            PinValue *pv = new PinValue();
+            pv->pin = pinSrc;
+            pv->value = DigitalRead(pinSrc);
+            pv->isTimerActive = false;
+            if (debounceTime != 0)
+            {
+                pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(isrDescr->debounceTime), pdFALSE, NULL, checkDeBounced);
+            }
+            else
+            {
+                pv->timer = NULL;
+            }
+            isrDescr->pinSrcMap.insert({pinSrc, pv});
+            it->second->pinSrcMap.insert({pinSrc, pv});
             return SIGMAIO_SUCCESS;
         }
     }
@@ -251,13 +293,19 @@ IOError SigmaIO::DetachInterrupt(uint pinIsr, uint pinSrc)
     }
     else
     {
-        auto src = it->second.pinSrcMap.find(pinSrc);
-        if (src != it->second.pinSrcMap.end())
+        auto src = it->second->pinSrcMap.find(pinSrc);
+        if (src != it->second->pinSrcMap.end())
         {
             // PinSrc attached
-            it->second.pinSrcMap.erase(src);
-            if (it->second.pinSrcMap.size() == 0)
+            if (src->second->timer != NULL)
             {
+                xTimerDelete(src->second->timer, 0);
+            }
+            delete src->second;
+            it->second->pinSrcMap.erase(src);
+            if (it->second->pinSrcMap.size() == 0)
+            {
+                delete it->second;
                 interruptMap.erase(it);
                 detachInterrupt(pinIsr);
             }
@@ -288,14 +336,7 @@ ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
     sigmaIO->isrCnt++;
     InterruptDescription *descr = (InterruptDescription *)arg;
     sigmaIO->p = descr->pinIsr;
-    if (descr->isEnabled)
-    {
-        if (descr->debounceTime != 0)
-        {
-            descr->isEnabled = false;
-        }
-        sigmaIO->err = esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &(descr->pinIsr), sizeof(descr->pinIsr), NULL);
-    }
+    sigmaIO->err = esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &(descr->pinIsr), sizeof(descr->pinIsr), NULL);
 }
 
 void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -303,45 +344,44 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
     byte *pin = (byte *)event_data;
     Serial.println("processInterrupt");
     Serial.printf("P=%d rin=%d\n", sigmaIO->p, *pin);
-    return;
-    /*
-    InterruptKey *key = (InterruptKey *)event_data;
-    auto it = interruptMap.find(*key);
-    if (it != interruptMap.end())
+    auto itIsr = interruptMap.find(*pin);
+    if (itIsr != interruptMap.end())
     {
-        for (auto it1 = it->second.begin(); it1 != it->second.end(); it1++)
+        Serial.println("processInterrupt found");
+        for (auto itSrc : itIsr->second->pinSrcMap)
         {
-            PinValue id = it1->second;
-            bool val = sigmaIO->DigitalRead(it1->first);
-            if (id.value != val)
+            Serial.printf("Pin src=%d\n", itSrc.first);
+            bool val = sigmaIO->DigitalRead(itSrc.first);
+            if (itSrc.second->value != val)
             {
-                if (id.debounceTime == 0)
-                {
-                    id.value = val;
-                    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, &id, sizeof(PinValue), NULL);
+                Serial.printf("Val Stored=%d val=%d\n", itSrc.second->value, val);
+                if (itSrc.second->timer != NULL)
+                { // Debounce is existing
+                    // if (xTimerIsTimerActive(it1.second.timer) == pdFALSE)
+                    if (!itSrc.second->isTimerActive)
+                    { // Debounce timer is not active - start it!
+                        Serial.println("Debounce timer is not active - start it!");
+                        itSrc.second->isTimerActive = true;
+                        xTimerStart(itSrc.second->timer, 0);
+                    }
+                    else
+                    {
+                        Serial.println("Debounce timer is active - skip it");
+                        // Debounce timer is active - skip it
+                    }
                 }
                 else
                 {
-                    TimerHandle_t xTimer = xTimerCreate("debounce", pdMS_TO_TICKS(id.debounceTime), pdFALSE, (void *)&it1->second,
-                                                        [](TimerHandle_t xTimer)
-                                                        {
-                                                            PinValue *id = (PinValue *)pvTimerGetTimerID(xTimer);
-                                                            byte val = sigmaIO->DigitalRead(id->pinSrc);
-                                                            if (id->value != val)
-                                                            {
-                                                                id->value = val;
-                                                                esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, id, sizeof(PinValue), NULL);
-                                                            }
-                                                            xTimerDelete(xTimer, 0);
-                                                        });
-                    xTimerStart(xTimer, 0);
+                    // No debounce
+                    itSrc.second->value = val;
+                    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, itSrc.second, sizeof(PinValue), NULL);
                 }
             }
         }
-    }*/
+    }
 }
 
 //-----------------------------------------------------
-std::map<uint, InterruptDescription> SigmaIO::interruptMap;
+std::map<uint, InterruptDescription*> SigmaIO::interruptMap;
 SigmaIO *sigmaIO;
 ESP_EVENT_DEFINE_BASE(SIGMAIO_EVENT);

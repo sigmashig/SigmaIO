@@ -10,11 +10,23 @@
 bool isButtonPressed = false;
 void eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-  Serial.println("Point0");
-  /*
-  InterruptDefinition *interruptDefinition = (InterruptDefinition *)event_data;
-  Serial.printf("Event: %d, pin: %d, value: %d\n", event_id, interruptDefinition->pinSrc, interruptDefinition->value);
-  */
+  switch (event_id)
+  {
+  case SIGMAIO_EVENT_DIRTY:
+    Serial.println("Dirty event");
+    break;
+  case SIGMAIO_EVENT_PIN:
+  {
+    Serial.println("Pin event");
+    /* code */
+    PinValue *pinValue = (PinValue *)event_data;
+    Serial.printf("Pin: %d, value: %d\n", pinValue->pin, pinValue->value);
+    break;
+  }
+  default:
+    Serial.println("Unknown event");
+    break;
+  }
 }
 
 void setup()
@@ -61,16 +73,18 @@ void loop()
       power = 0;
     }
     sigmaIO->SetPwm(LED_PIN, power);
+    /*
     Serial.printf("LED: %d\n", power);
     Serial.printf("ISR: %d\n", sigmaIO->isrCnt);
     Serial.printf("Error: %d\n", sigmaIO->err);
+    */
     delay(1000);
   }
   else
   {
-    Serial.println("Button is not pressed");
-    //InterruptDefinition interruptDefinition = {BUTTON_PIN, 100, false};
-    //esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &interruptDefinition, 0, 0);
+    //Serial.println("Button is not pressed");
+    // InterruptDefinition interruptDefinition = {BUTTON_PIN, 100, false};
+    // esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &interruptDefinition, 0, 0);
     delay(100);
   }
 }
