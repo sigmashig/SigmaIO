@@ -200,7 +200,7 @@ IOError SigmaIO::SetPwm(uint pin, uint value)
     }
 }
 
-void SigmaIO::checkDeBounced(TimerHandle_t xTimer)
+void SigmaIO::checkDebounced(TimerHandle_t xTimer)
 {
     Serial.printf("checkDeBounced timer= %d\n", xTimer);
     for (auto isrIt : sigmaIO->interruptMap)
@@ -218,7 +218,7 @@ void SigmaIO::checkDeBounced(TimerHandle_t xTimer)
                 { // The real input value has changed
                     srcIt.second->value = val;
 
-                    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, srcIt.second, sizeof(PinValue), NULL);
+                    esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, srcIt.second, sizeof(PinValue), portMAX_DELAY);
                 }
             }
         }
@@ -236,14 +236,14 @@ IOError SigmaIO::AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime, in
         // New PinIsr
 
         isrDescr->pinIsr = pinIsr;
-        isrDescr->debounceTime = debounceTime;
         PinValue *pv = new PinValue();
         pv->pin = pinSrc;
+        pv->debounceTime = debounceTime;
         pv->value = DigitalRead(pinSrc);
         pv->isTimerActive = false;
         if (debounceTime != 0)
         {
-            pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(isrDescr->debounceTime), pdFALSE, NULL, checkDeBounced);
+            pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(pv->debounceTime), pdFALSE, NULL, checkDebounced);
         }
         else
         {
@@ -267,10 +267,11 @@ IOError SigmaIO::AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime, in
             PinValue *pv = new PinValue();
             pv->pin = pinSrc;
             pv->value = DigitalRead(pinSrc);
+            pv->debounceTime = debounceTime;
             pv->isTimerActive = false;
             if (debounceTime != 0)
             {
-                pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(isrDescr->debounceTime), pdFALSE, NULL, checkDeBounced);
+                pv->timer = xTimerCreate("debounce", pdMS_TO_TICKS(pv->debounceTime), pdFALSE, NULL, checkDebounced);
             }
             else
             {
@@ -357,7 +358,7 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
                 Serial.printf("Val Stored=%d val=%d\n", itSrc.second->value, val);
                 if (itSrc.second->timer != NULL)
                 { // Debounce is existing
-                    // if (xTimerIsTimerActive(it1.second.timer) == pdFALSE)
+                    // if (xTimerIsTimerActive(itSrc.second->timer) == pdFALSE)
                     if (!itSrc.second->isTimerActive)
                     { // Debounce timer is not active - start it!
                         Serial.println("Debounce timer is not active - start it!");
@@ -374,7 +375,7 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
                 {
                     // No debounce
                     itSrc.second->value = val;
-                    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, itSrc.second, sizeof(PinValue), NULL);
+                    esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, itSrc.second, sizeof(PinValue), portMAX_DELAY);
                 }
             }
         }
@@ -382,6 +383,6 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
 }
 
 //-----------------------------------------------------
-std::map<uint, InterruptDescription*> SigmaIO::interruptMap;
+std::map<uint, InterruptDescription *> SigmaIO::interruptMap;
 SigmaIO *sigmaIO;
 ESP_EVENT_DEFINE_BASE(SIGMAIO_EVENT);

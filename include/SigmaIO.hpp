@@ -32,14 +32,14 @@ typedef struct
     uint pin;
     byte value;
     bool isTimerActive;
+    uint debounceTime;
     TimerHandle_t timer;
 } PinValue;
 
 typedef struct
 {
     uint pinIsr;
-    uint debounceTime;
-    std::map<uint, PinValue*> pinSrcMap;
+    std::map<uint, PinValue *> pinSrcMap;
 } InterruptDescription;
 
 class SigmaIO
@@ -82,9 +82,9 @@ private:
     };
     */
     static void processISR(void *arg);
-    static std::map<uint, InterruptDescription*> interruptMap;
+    static std::map<uint, InterruptDescription *> interruptMap;
     static void processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
-    static void checkDeBounced(TimerHandle_t xTimer);
+    static void checkDebounced(TimerHandle_t xTimer);
 };
 
 extern SigmaIO *sigmaIO;

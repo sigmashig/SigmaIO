@@ -7,24 +7,31 @@
 #define BUTTON_PIN 26
 #define ISR_PIN 14
 
-bool isButtonPressed = false;
+uint power = 0;
+
 void eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
   switch (event_id)
   {
-  case SIGMAIO_EVENT_DIRTY:
-    Serial.println("Dirty event");
-    break;
   case SIGMAIO_EVENT_PIN:
   {
     Serial.println("Pin event");
-    /* code */
     PinValue *pinValue = (PinValue *)event_data;
     Serial.printf("Pin: %d, value: %d\n", pinValue->pin, pinValue->value);
+    if (pinValue->pin == BUTTON_PIN && pinValue->value == LOW)
+    {
+      power += 9;
+      if (power > 99)
+      {
+        power = 0;
+      }
+      Serial.printf("Power: %d\n", power);
+      sigmaIO->SetPwm(LED_PIN, power);
+    }
     break;
   }
   default:
-    Serial.println("Unknown event");
+    Serial.println("Some, not interested event");
     break;
   }
 }
@@ -63,28 +70,5 @@ void setup()
 
 void loop()
 {
-  static uint power = 0;
-  byte btn = sigmaIO->DigitalRead(BUTTON_PIN);
-  if (btn == LOW)
-  {
-    power += 9;
-    if (power > 99)
-    {
-      power = 0;
-    }
-    sigmaIO->SetPwm(LED_PIN, power);
-    /*
-    Serial.printf("LED: %d\n", power);
-    Serial.printf("ISR: %d\n", sigmaIO->isrCnt);
-    Serial.printf("Error: %d\n", sigmaIO->err);
-    */
-    delay(1000);
-  }
-  else
-  {
-    //Serial.println("Button is not pressed");
-    // InterruptDefinition interruptDefinition = {BUTTON_PIN, 100, false};
-    // esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &interruptDefinition, 0, 0);
-    delay(100);
-  }
+  delay(100);
 }
