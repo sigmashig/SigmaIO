@@ -4,8 +4,8 @@
 #include <esp_event.h>
 
 #define LED_PIN LED_BUILTIN
-#define BUTTON_PIN 26
-#define ISR_PIN 14
+#define BUTTON_PIN 26 // PIN where button is connected
+#define ISR_PIN 14    // PIN where ISR is connected. Please, pay attention, that ISR_PIN CAN be different from BUTTON_PIN
 
 uint power = 0;
 
