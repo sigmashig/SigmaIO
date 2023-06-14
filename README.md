@@ -27,6 +27,19 @@ sigmaIO->registerDriver(pcf, 50, 65);
 MyDriver *myDriver = new MyDriver(0x15, "http://example.com");
 sigmaIO->registerDriver(myDriver, 100, 105);
 ```
+As alternative way, you can use the following code:
+```
+I2CParams i2cParams = {0x20, NULL, 0, 0}; // address, pointer to the I2C bus, SDA, SCL. Address only is used when pWire is NULL 
+
+sigmaIO->registerDriver(SIGMAIO_PCF, &i2cParams, 50, 65);
+```
+this case, the driver will be created automatically. The second parameter is void* is pointer to the driver constructor. 
+You can get a poiinter to the driver by calling GetPinDriver method. Example:
+```
+SigmaPCF8575 *pcf = (SigmaPCF8575 *)sigmaIO->GetPinDriver(55);
+
+```
+
 The registration map the range Begin...End to the driver. In the example above, the range 50...65 will be mapped to the PCF8575 driver and the range 100...105 will be mapped to the MyDriver driver. The range is used for the driver selection. 
 The Begin will be subtracted when call a function like pinMode, digitalRead, digitalWrite, analogRead, analogWrite. Example:
 ```
@@ -74,3 +87,4 @@ This driver is registered automatically (when you call constructor with paramete
 # History
 * v.0.1.1 - 2023/06/13 - Initial release
 * v.0.1.2 - 2023/06/14 - Add Begin method. Fix errors
+* v.0.1.3 - 2023/06/14 - Add autocreation of PCF driver

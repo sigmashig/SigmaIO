@@ -1,12 +1,12 @@
 #include "SigmaIO.hpp"
 #include "SigmaGPIO.hpp"
+#include "SigmaPCF8575.hpp"
 
 SigmaIO::SigmaIO(bool isRegisterGPIO)
 {
     if (isRegisterGPIO)
     {
-        gpio = new SigmaGPIO();
-        RegisterPinDriver(SIGMAIO_GPIO, 0, GPIO_PIN_COUNT - 1);
+        RegisterPinDriver(SIGMAIO_GPIO, NULL, 0, GPIO_PIN_COUNT - 1);
     }
     esp_event_handler_register(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
 }
@@ -48,7 +48,7 @@ IOError SigmaIO::DetachInterruptAll(uint pinIsr)
 
 IOError SigmaIO::PinMode(uint pin, byte mode)
 {
-    PinDriverDefinition pdd = getPinDriver(pin);
+    PinDriverDefinition pdd = GetPinDriver(pin);
     IOError res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
     if (pdd.pinDriver == nullptr)
     {
@@ -79,7 +79,7 @@ IOError SigmaIO::PinMode(uint pin, byte mode)
 
 void SigmaIO::DigitalWrite(uint pin, byte value)
 {
-    PinDriverDefinition pdd = getPinDriver(pin);
+    PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
         pdd.pinDriver->DigitalWrite(pin - pdd.beg, value);
@@ -88,7 +88,7 @@ void SigmaIO::DigitalWrite(uint pin, byte value)
 
 byte SigmaIO::DigitalRead(uint pin)
 {
-    PinDriverDefinition pdd = getPinDriver(pin);
+    PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
         return pdd.pinDriver->DigitalRead(pin - pdd.beg);
@@ -114,7 +114,7 @@ IOError SigmaIO::checkDriverRegistrationAbility(byte pinBegin, byte pinEnd)
     return SIGMAIO_SUCCESS;
 }
 
-IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, byte pinBegin, byte pinEnd)
+IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, byte pinBegin, byte pinEnd)
 {
     IOError res = checkDriverRegistrationAbility(pinBegin, pinEnd);
     if (res != SIGMAIO_SUCCESS)
@@ -125,8 +125,27 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, byte pinBegin, byte
     switch (driverCode)
     {
     case SIGMAIO_GPIO:
+    {
         pinDriver = new SigmaGPIO();
         break;
+    }
+    case SIGMAIO_PCF8575:
+    {
+        I2CParams *i2cParams = (I2CParams *)drvParams;
+        if (i2cParams == nullptr)
+        {
+            return SIGMAIO_ERROR_BAD_DRIVER_PARAMS;
+        }
+        if (i2cParams->pWire == nullptr)
+        {
+            pinDriver = new SigmaPCF8575IO(i2cParams->address);
+        }
+        else
+        {
+            pinDriver = new SigmaPCF8575IO(i2cParams->pWire, i2cParams->address, i2cParams->sda, i2cParams->scl);
+        }
+        break;
+    }
     default:
         return SIGMAIO_ERROR_BAD_DRIVER_CODE;
     }
@@ -176,7 +195,7 @@ IOError SigmaIO::UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver)
 
 IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint minValue, uint maxValue)
 {
-    PinDriverDefinition pdd = getPinDriver(pin);
+    PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
         if (pdd.pinDriver->CanBePWM(pin - pdd.beg))
@@ -203,7 +222,7 @@ IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint 
 
 IOError SigmaIO::SetPwm(uint pin, uint value)
 {
-    PinDriverDefinition pdd = getPinDriver(pin);
+    PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
         if (pdd.pinDriver->SetPwm(pin - pdd.beg, value))
@@ -223,17 +242,13 @@ IOError SigmaIO::SetPwm(uint pin, uint value)
 
 void SigmaIO::checkDebounced(TimerHandle_t xTimer)
 {
-    Serial.printf("checkDeBounced timer= %d\n", xTimer);
     for (auto isrIt : sigmaIO->interruptMap)
     {
-        Serial.printf("checkDeBounced isrIt= %d\n", isrIt.first);
         for (auto srcIt : isrIt.second->pinSrcMap)
         {
-            Serial.printf("checkDeBounced srcIt= %d\n", srcIt.first);
             if (srcIt.second->timer == xTimer)
             { // Timer found
                 bool val = sigmaIO->DigitalRead(srcIt.first);
-                Serial.printf("checkDeBounced old=%d new=%d\n", srcIt.second->value, val);
                 srcIt.second->isTimerActive = false;
                 if (srcIt.second->value != val)
                 { // The real input value has changed
@@ -248,8 +263,6 @@ void SigmaIO::checkDebounced(TimerHandle_t xTimer)
 
 IOError SigmaIO::AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime, int mode)
 {
-    Serial.printf("AttachInterrupt %d %d %d %d\n", pinIsr, pinSrc, debounceTime, mode);
-
     InterruptDescription *isrDescr = new InterruptDescription();
     auto it = interruptMap.find(pinIsr);
     if (it == interruptMap.end())
@@ -340,7 +353,7 @@ IOError SigmaIO::DetachInterrupt(uint pinIsr, uint pinSrc)
     }
 }
 
-SigmaIO::PinDriverDefinition SigmaIO::getPinDriver(uint pin)
+PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
 {
     if (pinDriverSet.size() != 0)
     {
@@ -355,40 +368,31 @@ SigmaIO::PinDriverDefinition SigmaIO::getPinDriver(uint pin)
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
 {
-    sigmaIO->isrCnt++;
     InterruptDescription *descr = (InterruptDescription *)arg;
-    sigmaIO->p = descr->pinIsr;
-    sigmaIO->err = esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &(descr->pinIsr), sizeof(descr->pinIsr), NULL);
+    esp_event_isr_post(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &(descr->pinIsr), sizeof(descr->pinIsr), NULL);
 }
 
 void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     byte *pin = (byte *)event_data;
-    Serial.println("processInterrupt");
-    Serial.printf("P=%d rin=%d\n", sigmaIO->p, *pin);
     auto itIsr = interruptMap.find(*pin);
     if (itIsr != interruptMap.end())
     {
-        Serial.println("processInterrupt found");
         for (auto itSrc : itIsr->second->pinSrcMap)
         {
-            Serial.printf("Pin src=%d\n", itSrc.first);
             bool val = sigmaIO->DigitalRead(itSrc.first);
             if (itSrc.second->value != val)
             {
-                Serial.printf("Val Stored=%d val=%d\n", itSrc.second->value, val);
                 if (itSrc.second->timer != NULL)
                 { // Debounce is existing
                     // if (xTimerIsTimerActive(itSrc.second->timer) == pdFALSE)
                     if (!itSrc.second->isTimerActive)
                     { // Debounce timer is not active - start it!
-                        Serial.println("Debounce timer is not active - start it!");
                         itSrc.second->isTimerActive = true;
                         xTimerStart(itSrc.second->timer, 0);
                     }
                     else
                     {
-                        Serial.println("Debounce timer is active - skip it");
                         // Debounce timer is active - skip it
                     }
                 }
