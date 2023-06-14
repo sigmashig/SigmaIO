@@ -1,16 +1,26 @@
 #include "SigmaIO.hpp"
 #include "SigmaGPIO.hpp"
 
-SigmaIO::SigmaIO()
+SigmaIO::SigmaIO(bool isRegisterGPIO)
 {
-    gpio = new SigmaGPIO();
-    RegisterPinDriver(gpio, 0, GPIO_PIN_COUNT - 1);
+    if (isRegisterGPIO)
+    {
+        gpio = new SigmaGPIO();
+        RegisterPinDriver(SIGMAIO_GPIO, 0, GPIO_PIN_COUNT - 1);
+    }
     esp_event_handler_register(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
 }
 
 SigmaIO::~SigmaIO()
 {
     esp_event_handler_unregister(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &processInterrupt);
+    for (auto it : pinRangeDriverSet)
+    {
+        if (it.second.isInternal)
+        {
+            delete it.second.pinDriver;
+        }
+    }
     pinRangeDriverSet.clear();
     pinDriverSet.clear();
 
@@ -19,7 +29,6 @@ SigmaIO::~SigmaIO()
         DetachInterruptAll(it.first);
     }
     interruptMap.clear();
-    delete gpio;
 }
 
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
@@ -87,46 +96,58 @@ byte SigmaIO::DigitalRead(uint pin)
     return 0xFF;
 }
 
-IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, byte pinBegin, byte pinEnd)
+IOError SigmaIO::checkDriverRegistrationAbility(byte pinBegin, byte pinEnd)
 {
     // PinDriverRange range = {pinBegin, pinEnd};
     if (pinBegin > pinEnd)
     {
         return SIGMAIO_ERROR_BAD_PIN_RANGE;
     }
+    for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
+    {
+        PinDriverDefinition pdd = it->second;
+        if ((it->second.beg <= pinBegin && pinBegin <= it->second.end) || (it->second.beg <= pinEnd && pinEnd <= it->second.end))
+        { // potentially found a hole. check if it is not overlapping with end
+            return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
+        }
+    }
+    return SIGMAIO_SUCCESS;
+}
+
+IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, byte pinBegin, byte pinEnd)
+{
+    IOError res = checkDriverRegistrationAbility(pinBegin, pinEnd);
+    if (res != SIGMAIO_SUCCESS)
+    {
+        return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
+    }
+    SigmaAbstractPinDriver *pinDriver = nullptr;
+    switch (driverCode)
+    {
+    case SIGMAIO_GPIO:
+        pinDriver = new SigmaGPIO();
+        break;
+    default:
+        return SIGMAIO_ERROR_BAD_DRIVER_CODE;
+    }
+    std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, true, pinDriver}};
+    pinRangeDriverSet.insert(newPair);
+    return SIGMAIO_SUCCESS;
+}
+
+IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, byte pinBegin, byte pinEnd)
+{
     if (pinDriver == NULL)
     {
         return SIGMAIO_ERROR_BAD_PIN_DRIVER;
     }
-    for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
+    IOError res = checkDriverRegistrationAbility(pinBegin, pinEnd);
+    if (res != SIGMAIO_SUCCESS)
     {
-        PinDriverDefinition pdd = it->second;
-        if (pdd.pinDriver == pinDriver)
-        {
-            if (pdd.beg == pinBegin && pdd.end == pinEnd)
-            {
-                return SIGMAIO_SUCCESS;
-            }
-            else
-            {
-                return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
-            }
-        }
-        if (it->first > pinBegin)
-        { // potentially found a hole. check if it is not overlapping with end
-            if (it->first <= pinEnd)
-            {
-                return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
-            }
-            else
-            {
-                std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, pinDriver}};
-                pinRangeDriverSet.insert(newPair);
-                return SIGMAIO_SUCCESS;
-            }
-        }
+        return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
     }
-    std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, pinDriver}};
+
+    std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, false, pinDriver}};
     pinRangeDriverSet.insert(newPair);
     return SIGMAIO_SUCCESS;
 }
@@ -329,7 +350,7 @@ SigmaIO::PinDriverDefinition SigmaIO::getPinDriver(uint pin)
             return it->second;
         }
     }
-    return {0, 0, nullptr};
+    return {0, 0, false, nullptr};
 }
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
@@ -379,6 +400,14 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
                 }
             }
         }
+    }
+}
+
+void SigmaIO::Begin()
+{
+    for (auto it : pinRangeDriverSet)
+    {
+        it.second.pinDriver->Begin();
     }
 }
 

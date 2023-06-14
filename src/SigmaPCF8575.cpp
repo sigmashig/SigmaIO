@@ -34,7 +34,8 @@ byte SigmaPCF8575IO::DigitalRead(byte pin)
     return pcf8575->digitalRead(pin);
 }
 
-void SigmaPCF8575IO::init()
+bool SigmaPCF8575IO::Begin()
 {
     pcf8575->begin();
+    return true;
 }

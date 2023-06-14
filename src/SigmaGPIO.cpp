@@ -90,9 +90,10 @@ bool SigmaGPIO::SetPwm(byte pin, uint value)
     {
         if (channel.first == pin)
         { // pin found.
-            ledcWrite(channel.second.number, NormalizePwmValue(value,channel.second.resolution, channel.second.minValue, channel.second.maxValue));
+            ledcWrite(channel.second.number, NormalizePwmValue(value, channel.second.resolution, channel.second.minValue, channel.second.maxValue));
             return true;
         }
     }
     return false;
 }
+

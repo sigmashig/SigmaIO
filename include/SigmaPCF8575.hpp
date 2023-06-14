@@ -10,6 +10,8 @@ public:
     SigmaPCF8575IO(TwoWire *pWire, byte address, uint sda = 0, uint scl = 0);
 
     ~SigmaPCF8575IO();
+    String GetPinDriverName() { return "SigmaPCF8575IO"; }
+    bool Begin();
     void PinMode(byte pin, byte mode);
     void DigitalWrite(byte pin, byte value);
     byte DigitalRead(byte pin);
@@ -23,6 +25,4 @@ public:
 
 private:
     PCF8575 *pcf8575;
-    void init();
-    static void isr();
 };
