@@ -88,3 +88,4 @@ This driver is registered automatically (when you call constructor with paramete
 * v.0.1.1 - 2023/06/13 - Initial release
 * v.0.1.2 - 2023/06/14 - Add Begin method. Fix errors
 * v.0.1.3 - 2023/06/14 - Add autocreation of PCF driver
+* v.0.1.4 - 2023/06/20 - Add missed Wire.h include

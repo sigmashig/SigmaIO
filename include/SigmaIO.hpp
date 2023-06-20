@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 #include "SigmaAbstractPinDriver.hpp"
-// #include <vector>
 #include <map>
 #include <esp_event.h>
 #include <SigmaGPIO.hpp>
@@ -73,13 +72,26 @@ public:
     SigmaIO(bool isRegisterGPIO = true);
     ~SigmaIO();
     void Begin();
+    /**
+     * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range
+     * @param pinDriver - pointer to the driver
+     * @param pinBegin - begin of the pin range
+     * @param pinEnd - end of the pin range
+     */
+    IOError RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, byte pinBegin, byte pinEnd);
+    /**
+     * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range.
+     *       This method is used for internal drivers only (GPIO, PCF8575)
+     * @param driverCode - driver code
+     * @param drvParams - pointer to the driver parameters. The type of parameters depends on the driver code
+     * @param pinBegin - begin of the pin range
+     */
+    IOError RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, byte pinBegin, byte pinEnd);
+    IOError UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver);
     IOError DetachInterruptAll(uint pinIsr);
     IOError PinMode(uint pin, byte mode);
     void DigitalWrite(uint pin, byte value);
     byte DigitalRead(uint pin);
-    IOError RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, byte pinBegin, byte pinEnd);
-    IOError RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, byte pinBegin, byte pinEnd);
-    IOError UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver);
     IOError RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF);
     IOError SetPwm(uint pin, uint value);
     PinDriverDefinition GetPinDriver(uint pin);
