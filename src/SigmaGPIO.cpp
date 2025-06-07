@@ -1,5 +1,5 @@
-#include "SigmaGPIO.hpp"
-#include "SigmaIO.hpp"
+#include "SigmaGPIO.h"
+#include "SigmaIO.h"
 
 SigmaGPIO::SigmaGPIO()
 {

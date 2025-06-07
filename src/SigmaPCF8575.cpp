@@ -1,5 +1,5 @@
-#include "SigmaPCF8575.hpp"
-#include "SigmaIO.hpp"
+#include "SigmaPCF8575.h"
+#include "SigmaIO.h"
 
 SigmaPCF8575IO::SigmaPCF8575IO(byte address)
 {

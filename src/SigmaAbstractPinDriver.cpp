@@ -1,4 +1,4 @@
-#include "SigmaAbstractPinDriver.hpp"
+#include "SigmaAbstractPinDriver.h"
 
 uint SigmaAbstractPinDriver::NormalizePwmValue(uint value, byte resolution, uint minValue, uint maxValue)
 {

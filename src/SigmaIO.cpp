@@ -1,6 +1,6 @@
-#include "SigmaIO.hpp"
-#include "SigmaGPIO.hpp"
-#include "SigmaPCF8575.hpp"
+#include "SigmaIO.h"
+#include "SigmaGPIO.h"
+#include "SigmaPCF8575.h"
 
 SigmaIO::SigmaIO(bool isRegisterGPIO)
 {
