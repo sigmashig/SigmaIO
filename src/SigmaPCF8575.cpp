@@ -4,13 +4,13 @@
 SigmaPCF8575IO::SigmaPCF8575IO(byte address)
 {
     pcf8575 = new PCF8575(address);
-    init();
+    //init();
 }
 
 SigmaPCF8575IO::SigmaPCF8575IO(TwoWire *pWire, byte address, uint sda, uint scl)
 {
     pcf8575 = new PCF8575(pWire, address, sda, scl);
-    init();
+    //init();
 }
 
 SigmaPCF8575IO::~SigmaPCF8575IO()
@@ -26,6 +26,7 @@ void SigmaPCF8575IO::PinMode(byte pin, byte mode)
 
 void SigmaPCF8575IO::DigitalWrite(byte pin, byte value)
 {
+    //Serial.printf("DigitalWrite: pin: %d, value: %d\n", pin, value);
     pcf8575->digitalWrite(pin, value);
 }
 

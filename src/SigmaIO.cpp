@@ -249,12 +249,12 @@ void SigmaIO::checkDebounced(TimerHandle_t xTimer)
             if (srcIt.second->timer == xTimer)
             { // Timer found
                 bool val = sigmaIO->DigitalRead(srcIt.first);
+                //Serial.printf("checkDebounced: pin: %d, OLD value: %d, NEW value: %d\n", srcIt.first, srcIt.second->value, val);
                 srcIt.second->isTimerActive = false;
                 if (srcIt.second->value != val)
                 { // The real input value has changed
                     srcIt.second->value = val;
-
-                    esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN, srcIt.second, sizeof(PinValue), portMAX_DELAY);
+                    esp_event_post(SIGMAIO_EVENT, SIGMAIO_EVENT_PIN1, srcIt.second, sizeof(PinValue), portMAX_DELAY);
                 }
             }
         }
@@ -374,8 +374,9 @@ ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
 
 void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    byte *pin = (byte *)event_data;
+    uint *pin = (uint *)event_data;
     auto itIsr = interruptMap.find(*pin);
+    //Serial.printf("processInterrupt: pin: %d\n", *pin);
     if (itIsr != interruptMap.end())
     {
         for (auto itSrc : itIsr->second->pinSrcMap)
@@ -383,6 +384,7 @@ void SigmaIO::processInterrupt(void *arg, esp_event_base_t event_base, int32_t e
             bool val = sigmaIO->DigitalRead(itSrc.first);
             if (itSrc.second->value != val)
             {
+               // Serial.printf("processInterrupt: pin: %d, OLD value: %d, NEW value: %d\n", itSrc.first, itSrc.second->value, val);
                 if (itSrc.second->timer != NULL)
                 { // Debounce is existing
                     // if (xTimerIsTimerActive(itSrc.second->timer) == pdFALSE)

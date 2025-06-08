@@ -17,7 +17,8 @@ typedef enum
 typedef enum
 {
     SIGMAIO_EVENT_DIRTY = 0,
-    SIGMAIO_EVENT_PIN
+    SIGMAIO_EVENT_PIN,
+    SIGMAIO_EVENT_PIN1
 } SigmaIoEvent;
 
 typedef enum
