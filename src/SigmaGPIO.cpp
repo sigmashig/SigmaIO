@@ -9,37 +9,42 @@ SigmaGPIO::~SigmaGPIO()
 {
 }
 
-void SigmaGPIO::PinMode(byte pin, byte mode)
+void SigmaGPIO::PinMode(uint pin, byte mode)
 {
     pinMode(pin, mode);
 }
 
-void SigmaGPIO::DigitalWrite(byte pin, byte value)
+IOError SigmaGPIO::DigitalWrite(uint pin, byte value)
 {
-    gpio_set_level((gpio_num_t)pin, value);
+    if (ESP_OK == gpio_set_level((gpio_num_t)pin, value))
+    {
+        return SIGMAIO_SUCCESS;
+    }
+    return SIGMAIO_ERROR_BAD_VALUE;
 }
 
-byte SigmaGPIO::DigitalRead(byte pin)
+byte SigmaGPIO::DigitalRead(uint pin)
 {
     return gpio_get_level((gpio_num_t)pin);
 }
 
-bool SigmaGPIO::CanBePWM(byte pin)
+bool SigmaGPIO::CanBePWM(uint pin)
 {
     return GPIO_IS_VALID_OUTPUT_GPIO(pin);
 }
 
-void SigmaGPIO::AnalogWrite(byte pin, uint value)
+IOError SigmaGPIO::AnalogWrite(uint pin, uint value)
 {
     analogWrite(pin, value);
+    return SIGMAIO_SUCCESS;
 }
 
-int SigmaGPIO::AnalogRead(byte pin)
+int SigmaGPIO::AnalogRead(uint pin)
 {
     return analogRead(pin);
 }
 
-bool SigmaGPIO::RegisterPwmPin(byte pin, uint frequency, byte resolution, uint minValue, uint maxValue)
+bool SigmaGPIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint minValue, uint maxValue)
 {
     ChannelDefinition channelDefinition = {0, frequency, resolution, minValue, maxValue};
     byte minCh = 0;
@@ -71,7 +76,7 @@ bool SigmaGPIO::RegisterPwmPin(byte pin, uint frequency, byte resolution, uint m
     return true;
 }
 
-bool SigmaGPIO::UnRegisterPwmPin(byte pin)
+bool SigmaGPIO::UnRegisterPwmPin(uint pin)
 {
     for (auto &channel : pwmChannels)
     {
@@ -84,7 +89,7 @@ bool SigmaGPIO::UnRegisterPwmPin(byte pin)
     return false;
 }
 
-bool SigmaGPIO::SetPwm(byte pin, uint value)
+bool SigmaGPIO::SetPwm(uint pin, uint value)
 {
     for (auto &channel : pwmChannels)
     {

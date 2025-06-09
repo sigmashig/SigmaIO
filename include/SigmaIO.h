@@ -6,96 +6,49 @@
 #include <SigmaGPIO.h>
 #include <Wire.h>
 
-ESP_EVENT_DECLARE_BASE(SIGMAIO_EVENT);
-
-typedef enum
-{
-    SIGMAIO_GPIO = 0x00,
-    SIGMAIO_PCF8575
-} SigmaIoDriver;
-
-typedef enum
-{
-    SIGMAIO_EVENT_DIRTY = 0,
-    SIGMAIO_EVENT_PIN,
-    SIGMAIO_EVENT_PIN1
-} SigmaIoEvent;
-
-typedef enum
-{
-    SIGMAIO_SUCCESS = 0,
-    SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED,
-    SIGMAIO_ERROR_PIN_NOT_REGISTERED,
-    SIGMAIO_ERROR_PIN_DRIVER_ALREADY_REGISTERED,
-    SIGMAIO_ERROR_BAD_PIN_RANGE,
-    SIGMAIO_ERROR_BAD_PIN_DRIVER,
-    SIGMAIO_ERROR_BAD_DRIVER_CODE,
-    SIGMAIO_ERROR_BAD_DRIVER_PARAMS,
-    SIGMAIO_ERROR_PIN_NOT_PWM,
-    SIGMAIO_ERROR_INTERRUPT_ALREADY_ATTACHED,
-    SIGMAIO_ERROR_INTERRUPT_NOT_ATTACHED
-} IOError;
-
-typedef struct
-{
-    uint pin;
-    byte value;
-    bool isTimerActive;
-    uint debounceTime;
-    TimerHandle_t timer;
-} PinValue;
-
-typedef struct
-{
-    uint pinIsr;
-    std::map<uint, PinValue *> pinSrcMap;
-} InterruptDescription;
-
-typedef struct
-{
-    uint beg;
-    uint end;
-    bool isInternal;
-    SigmaAbstractPinDriver *pinDriver;
-} PinDriverDefinition;
-
-typedef struct
-{
-    byte address;
-    TwoWire *pWire;
-    uint sda;
-    uint scl;
-} I2CParams;
+// PinDriverDefinition is now defined in SigmaIOTypes.h
 
 class SigmaIO
 {
 public:
-    SigmaIO(bool isRegisterGPIO = true);
-    ~SigmaIO();
-    void Begin();
+    // SigmaIO(bool isRegisterGPIO = true);
+    //~SigmaIO();
+    // void Begin();
     /**
      * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range
      * @param pinDriver - pointer to the driver
      * @param pinBegin - begin of the pin range
-     * @param pinEnd - end of the pin range
+     * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    IOError RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, byte pinBegin, byte pinEnd);
+    static IOError RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBegin, uint numberPins = 0);
     /**
      * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range.
      *       This method is used for internal drivers only (GPIO, PCF8575)
      * @param driverCode - driver code
      * @param drvParams - pointer to the driver parameters. The type of parameters depends on the driver code
-     * @param pinBegin - begin of the pin range
+     * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    IOError RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, byte pinBegin, byte pinEnd);
-    IOError UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver);
-    IOError DetachInterruptAll(uint pinIsr);
-    IOError PinMode(uint pin, byte mode);
-    void DigitalWrite(uint pin, byte value);
-    byte DigitalRead(uint pin);
-    IOError RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF);
-    IOError SetPwm(uint pin, uint value);
-    PinDriverDefinition GetPinDriver(uint pin);
+    static IOError RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, uint pinBegin, uint numberPins = 0);
+    static IOError UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver);
+    static PinDriverDefinition GetPinDriver(uint pin);
+
+    static IOError PinMode(uint pin, byte mode);
+    static IOError DigitalWrite(uint pin, byte value);
+    static byte DigitalRead(uint pin);
+
+    static uint AnalogRead(uint pin);
+    static IOError AnalogWrite(uint pin, uint value);
+
+    /**
+     * @brief Register PWM pin. This method is used when pin supports an individual PWM. The pin should be registered as output pin before using this method
+     * @param pin - pin number
+     * @param frequency - frequency in Hz
+     * @param resolution - resolution in bits
+     * @param minValue - minimum value
+     * @param maxValue - maximum value
+     */
+    static IOError RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF);
+    static IOError SetPwm(uint pin, uint value);
     // Interrupts
     /**
      * @brief Attach interrupt to the pin. This method is used for registered pins only. You should register both pins: ISR and SRC
@@ -109,25 +62,32 @@ public:
      *
      */
 
-    IOError AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime = 0, int mode = FALLING);
-    IOError DetachInterrupt(uint pinIsr, uint pinSrc);
+    static IOError AttachInterrupt(uint pinIsr, uint pinSrc, uint debounceTime = 0, int mode = FALLING);
+    static IOError DetachInterrupt(uint pinIsr, uint pinSrc);
+    static IOError DetachInterruptAll(uint pinIsr);
+
+    static esp_err_t SetEventLoop(esp_event_loop_handle_t _eventLoop);
+    static esp_event_loop_handle_t GetEventLoop() { return eventLoop; }
+    static esp_event_base_t GetEventBase() { return eventBase; }
 
 private:
     /**
      * @brief The map of pin ranges and drivers. The key is the BEGIN of pin range. The value is the driver
      * Contains one record for the one driver.
      */
-    std::map<uint, PinDriverDefinition> pinRangeDriverSet;
+    inline static std::map<uint, PinDriverDefinition> pinRangeDriverSet;
     /**
      * @brief The map of pins and drivers. The key is the pin number. The value is the driver. Every pin registered in the system are added to this map
      */
-    std::map<uint, PinDriverDefinition> pinDriverSet;
-    IOError checkDriverRegistrationAbility(byte pinBegin, byte pinEnd);
+    inline static std::map<uint, PinDriverDefinition> pinDriverSet;
+    inline static esp_event_base_t eventBase = "SigmaIO";
+    inline static esp_event_loop_handle_t eventLoop = NULL;
+    inline static bool isInit = false;
+    inline static std::map<uint, InterruptDescription *> interruptMap;
 
+    static IOError checkDriverRegistrationAbility(uint pinBegin, uint numberPins);
     static void processISR(void *arg);
-    static std::map<uint, InterruptDescription *> interruptMap;
     static void processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static void checkDebounced(TimerHandle_t xTimer);
+    static void init();
 };
-
-extern SigmaIO *sigmaIO;

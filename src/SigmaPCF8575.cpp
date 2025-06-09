@@ -1,16 +1,12 @@
 #include "SigmaPCF8575.h"
 #include "SigmaIO.h"
 
-SigmaPCF8575IO::SigmaPCF8575IO(byte address)
-{
-    pcf8575 = new PCF8575(address);
-    //init();
-}
 
-SigmaPCF8575IO::SigmaPCF8575IO(TwoWire *pWire, byte address, uint sda, uint scl)
+SigmaPCF8575IO::SigmaPCF8575IO(byte address, TwoWire *pWire, uint sda, uint scl)
 {
     pcf8575 = new PCF8575(pWire, address, sda, scl);
-    //init();
+    pcf8575->begin();
+    // init();
 }
 
 SigmaPCF8575IO::~SigmaPCF8575IO()
@@ -18,25 +14,22 @@ SigmaPCF8575IO::~SigmaPCF8575IO()
     delete pcf8575;
 }
 
-void SigmaPCF8575IO::PinMode(byte pin, byte mode)
+void SigmaPCF8575IO::PinMode(uint pin, byte mode)
 {
-    byte m = mode == OUTPUT ? OUTPUT : INPUT;
+    byte m = mode == OUTPUT ? OUTPUT : INPUT; // Pull-up/down is not supported
     pcf8575->pinMode(pin, m);
 }
 
-void SigmaPCF8575IO::DigitalWrite(byte pin, byte value)
+IOError SigmaPCF8575IO::DigitalWrite(uint pin, byte value)
 {
-    //Serial.printf("DigitalWrite: pin: %d, value: %d\n", pin, value);
-    pcf8575->digitalWrite(pin, value);
+    if (pcf8575->digitalWrite(pin, value))
+    {
+        return SIGMAIO_SUCCESS;
+    }
+    return SIGMAIO_ERROR_BAD_VALUE;
 }
 
-byte SigmaPCF8575IO::DigitalRead(byte pin)
+byte SigmaPCF8575IO::DigitalRead(uint pin)
 {
     return pcf8575->digitalRead(pin);
-}
-
-bool SigmaPCF8575IO::Begin()
-{
-    pcf8575->begin();
-    return true;
 }
