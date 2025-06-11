@@ -30,7 +30,8 @@ byte SigmaGPIO::DigitalRead(uint pin)
 
 bool SigmaGPIO::CanBePWM(uint pin)
 {
-    return GPIO_IS_VALID_OUTPUT_GPIO(pin);
+    // return GPIO_IS_VALID_OUTPUT_GPIO(pin);
+    return (pin == 2 || pin == 4 || pin == 12 || pin == 13 || pin == 14 || pin == 15 || pin == 16 || pin == 17 || pin == 18 || pin == 19 || pin == 21 || pin == 22 || pin == 23 || pin == 25 || pin == 26 || pin == 27 || pin == 32 || pin == 33);
 }
 
 IOError SigmaGPIO::AnalogWrite(uint pin, uint value)
@@ -44,9 +45,11 @@ int SigmaGPIO::AnalogRead(uint pin)
     return analogRead(pin);
 }
 
-bool SigmaGPIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint minValue, uint maxValue)
+bool SigmaGPIO::RegisterPwmPin(uint pin, uint frequency)
 {
-    ChannelDefinition channelDefinition = {0, frequency, resolution, minValue, maxValue};
+    ChannelDefinition channelDefinition = {
+        .number = 0,
+        .frequency = frequency};
     byte minCh = 0;
     bool chFound = false;
     for (auto &channel : pwmChannels)
@@ -95,10 +98,11 @@ bool SigmaGPIO::SetPwm(uint pin, uint value)
     {
         if (channel.first == pin)
         { // pin found.
-            ledcWrite(channel.second.number, NormalizePwmValue(value, channel.second.resolution, channel.second.minValue, channel.second.maxValue));
+            uint nValue = NormalizePwmValue(value, channel.second.minValue, channel.second.maxValue);
+            // Serial.printf("SetPwm: pin: %d, value: %d, nValue: %d\n", pin, value, nValue);
+            ledcWrite(channel.second.number, nValue);
             return true;
         }
     }
     return false;
 }
-

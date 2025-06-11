@@ -1,9 +1,17 @@
 #include "SigmaAbstractPinDriver.h"
 
-uint SigmaAbstractPinDriver::NormalizePwmValue(uint value, byte resolution, uint minValue, uint maxValue)
+uint SigmaAbstractPinDriver::NormalizePwmValue(uint value, uint minValue, uint maxValue)
 {
     uint res;
-    uint maxVal = min<uint>(((((uint)1) << resolution) - 1), maxValue);
-    res = map((value > 99 ? 99 : value), 0, 99, minValue, maxVal);
+    if (value == 0)
+    {
+        res = 0;
+    }
+    else
+    {
+        uint newValue = min<uint>(value, 100);
+        res = map(newValue, 0, 100, minValue, maxValue);
+    }
+    //Serial.printf("NormalizePwmValue: value: %d, minValue: %d, maxValue: %d, res: %d\n", value, minValue, maxValue, res);
     return res;
 }

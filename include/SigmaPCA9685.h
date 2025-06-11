@@ -30,7 +30,7 @@ public:
      * @param minValue - IGNORED! Fixed! minValue = 0
      * @param maxValue - IGNORED! Fixed! maxValue = 0x0FFF
      */
-    bool RegisterPwmPin(uint pin, uint frequency=0, byte resolution=12, uint minValue = 0, uint maxValue = 0x0FFF){return true;};
+    bool RegisterPwmPin(uint pin, uint frequency=0){return true;};
     bool UnRegisterPwmPin(uint pin) { return true; };
 
     bool SetPwm(uint pin, uint value);

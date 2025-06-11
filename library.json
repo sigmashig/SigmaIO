@@ -16,7 +16,8 @@
     ],
     "license": "MIT",
     "dependencies": {
-        "xreef/PCF8575 library":"^1.1.0"
+        "xreef/PCF8575 library": "^2.0.0",
+        "robtillaart/PCA9685": "^0.7.2"
     },
     "homepage": "https://github.com/sigmashig",
     "frameworks": "arduino",

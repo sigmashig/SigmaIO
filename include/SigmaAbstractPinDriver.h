@@ -48,12 +48,9 @@ public:
      *       Attention 2! Not all drivers supports of all frequencies and resolutions. You should check it before use
      * @param pin - number of pin
      * @param frequency - PWM frequency in Hz. The default value is 5000 Hz
-     * @param resolution - PWM resolution. The default value is 7 bits
-     * @param minValue - minimum value for PWM. The default value is 0. It is a minimal value which set to the pin when 0% is requested.
-     * @param maxValue - maximum value for PWM. The default value is 0xFFFF. It is a maximal value which set to the pin when 100% is requested.
      * @return true when the pin is registered as PWM
      */
-    virtual bool RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF) = 0;
+    virtual bool RegisterPwmPin(uint pin, uint frequency = 5000) = 0;
     /**
      * @brief Unregister pin as PWM. This method is used for registered pins only.
      * @param pin - number of pin
@@ -81,5 +78,5 @@ public:
     virtual void AfterRegistration(PinDriverDefinition pdd) = 0;
 
 protected:
-    static uint NormalizePwmValue(uint value, byte resolution, uint minValue = 0, uint maxValue = 0xFFFF);
+    static uint NormalizePwmValue(uint value, uint minValue, uint maxValue);
 };

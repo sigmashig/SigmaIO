@@ -17,7 +17,7 @@ public:
     bool CanBePWM(uint pin) { return false; };
     IOError AnalogWrite(uint pin, uint value) { return SIGMAIO_ERROR_NOT_SUPPORTED; };
     int AnalogRead(uint pin) { return -1; };
-    bool RegisterPwmPin(uint pin, uint frequency, byte resolution, uint minValue = 0, uint maxValue = 0xFFFF) { return false; }
+    bool RegisterPwmPin(uint pin, uint frequency) { return false; }
     bool UnRegisterPwmPin(uint pin) { return false; };
 
     bool SetPwm(uint pin, uint value) { return false; };

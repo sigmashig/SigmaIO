@@ -43,13 +43,10 @@ public:
      * @brief Register PWM pin. This method is used when pin supports an individual PWM. The pin should be registered as output pin before using this method
      * @param pin - pin number
      * @param frequency - frequency in Hz
-     * @param resolution - resolution in bits
-     * @param minValue - minimum value
-     * @param maxValue - maximum value
      */
-    static IOError RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF);
-    static IOError SetPwm(uint pin, uint value);
+    static IOError RegisterPwmPin(uint pin, uint frequency = 5000);
     // Interrupts
+    static IOError SetPwm(uint pin, uint value);
     /**
      * @brief Attach interrupt to the pin. This method is used for registered pins only. You should register both pins: ISR and SRC
      *          pins before using. You can attach a several pins to one interrupt. This case, the event will be posted for every pin,

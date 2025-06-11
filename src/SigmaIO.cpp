@@ -6,7 +6,6 @@
 void SigmaIO::init()
 {
     isInit = true;
-    //Serial.println("SigmaIO init");
     RegisterPinDriver(SIGMAIO_GPIO, NULL, 0, GPIO_PIN_COUNT - 1);
     if (eventLoop == NULL)
     {
@@ -17,7 +16,7 @@ void SigmaIO::init()
             .task_stack_size = 4096,
             .task_core_id = 0};
 
-        esp_event_loop_create(&loop_args, (void**)&eventLoop);
+        esp_event_loop_create(&loop_args, (void **)&eventLoop);
         if (eventLoop == NULL)
         {
             Serial.println("SigmaIO: event loop creation failed");
@@ -25,27 +24,6 @@ void SigmaIO::init()
     }
     esp_event_handler_register_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
 }
-/*
-SigmaIO::~SigmaIO()
-{
-    esp_event_handler_unregister(SIGMAIO_EVENT, SIGMAIO_EVENT_DIRTY, &processInterrupt);
-    for (auto it : pinRangeDriverSet)
-    {
-        if (it.second.isInternal)
-        {
-            delete it.second.pinDriver;
-        }
-    }
-    pinRangeDriverSet.clear();
-    pinDriverSet.clear();
-
-    for (auto it : interruptMap)
-    {
-        DetachInterruptAll(it.first);
-    }
-    interruptMap.clear();
-}
-*/
 
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
 {
@@ -68,17 +46,17 @@ esp_err_t SigmaIO::SetEventLoop(esp_event_loop_handle_t _eventLoop)
     {
         return ESP_ERR_INVALID_ARG;
     }
-//    if (eventLoop != NULL)
-//    {      
-//        esp_event_handler_unregister_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, &processInterrupt);
-//        esp_event_loop_delete(eventLoop);
-//    }
+    //    if (eventLoop != NULL)
+    //    {
+    //        esp_event_handler_unregister_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, &processInterrupt);
+    //        esp_event_loop_delete(eventLoop);
+    //    }
+
     esp_event_handler_unregister_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, &processInterrupt);
     eventLoop = _eventLoop;
     esp_event_handler_register_with(_eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, &processInterrupt, NULL);
     return ESP_OK;
 }
-
 
 IOError SigmaIO::PinMode(uint pin, byte mode)
 {
@@ -90,29 +68,17 @@ IOError SigmaIO::PinMode(uint pin, byte mode)
     IOError res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
     if (pdd.pinDriver == nullptr)
     {
-        // pin is not initialized yet
-        for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
-        {
-            pdd = it->second;
-
-            if (it->first <= pin)
-            {
-                if (pin <= pdd.end)
-                { // range found
-                    std::pair<int, PinDriverDefinition> newPair = {pin, pdd};
-                    pinDriverSet.insert(newPair);
-
-                    res = SIGMAIO_SUCCESS;
-                    break;
-                }
-            }
-        }
+        return res;
     }
-    if (res == SIGMAIO_SUCCESS)
-    {
-        pdd.pinDriver->PinMode(pin - pdd.beg, mode);
+
+    // pin is not initialized yet
+    auto it = pinDriverSet.find(pin);
+    if (it == pinDriverSet.end())
+    { // pin is not registered
+        pinDriverSet.insert({pin, pdd});
     }
-    return res;
+    pdd.pinDriver->PinMode(pin - pdd.beg, mode);
+    return SIGMAIO_SUCCESS;
 }
 
 IOError SigmaIO::DigitalWrite(uint pin, byte value)
@@ -183,11 +149,11 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     }
     uint pinEnd = pinBegin + numberPins - 1;
 
-    //Serial.printf("checkDriverRegistrationAbility: pinBegin: %d, pinEnd: %d\n", pinBegin, pinEnd);
     for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
     {
         PinDriverDefinition pdd = it->second;
-        if ((it->second.beg <= pinBegin && pinBegin <= it->second.end) || (it->second.beg <= pinEnd && pinEnd <= it->second.end))
+        if ((it->second.beg <= pinBegin && pinBegin <= it->second.end) 
+        || (it->second.beg <= pinEnd && pinEnd <= it->second.end))
         { // potentially found a hole. check if it is not overlapping with end
             return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
         }
@@ -269,7 +235,6 @@ IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBe
     {
         numberPins = pinDriver->GetNumberOfPins();
     }
-    //Serial.printf("RegisterPinDriver: pinBegin: %d, numberPins: %d\n", pinBegin, numberPins);
     IOError res = checkDriverRegistrationAbility(pinBegin, numberPins);
     if (res != SIGMAIO_SUCCESS)
     {
@@ -277,15 +242,13 @@ IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBe
     }
     uint pinEnd = pinBegin + numberPins - 1;
     std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, false, pinDriver}};
-    //Serial.printf("RegisterPinDriver: newPair: %d, %d-%d\n", newPair.first, newPair.second.beg, newPair.second.end);
     pinRangeDriverSet.insert(newPair);
-    //Serial.printf("RegisterPinDriver: pinRangeDriverSet.size(): %d\n", pinRangeDriverSet.size());
     pinDriver->AfterRegistration(newPair.second);
     return SIGMAIO_SUCCESS;
 }
 
 IOError SigmaIO::UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver)
-{   
+{
     if (!isInit)
     {
         init();
@@ -310,7 +273,7 @@ IOError SigmaIO::UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver)
     return SIGMAIO_ERROR_BAD_PIN_DRIVER;
 }
 
-IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint minValue, uint maxValue)
+IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency)
 {
     if (!isInit)
     {
@@ -319,10 +282,13 @@ IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint 
     PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
+
         if (pdd.pinDriver->CanBePWM(pin - pdd.beg))
         {
-            if (pdd.pinDriver->RegisterPwmPin(pin - pdd.beg, frequency, resolution, minValue, maxValue))
+            if (pdd.pinDriver->RegisterPwmPin(pin - pdd.beg, frequency))
             {
+                pinDriverSet.insert({pin, pdd});
+                pdd.pinDriver->PinMode(pin - pdd.beg, OUTPUT);
                 return SIGMAIO_SUCCESS;
             }
             else
@@ -343,11 +309,9 @@ IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency, byte resolution, uint 
 
 IOError SigmaIO::SetPwm(uint pin, uint value)
 {
-    //Serial.printf("SetPwm: pin: %d, value: %d\n", pin, value);
     PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
-        //Serial.printf("SetPwm: pinDriver: %s\n", pdd.pinDriver->GetPinDriverName().c_str());
         if (pdd.pinDriver->SetPwm(pin - pdd.beg, value))
         {
             return SIGMAIO_SUCCESS;
@@ -489,14 +453,11 @@ PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
     {
         init();
     }
-    //Serial.printf("GetPinDriver: pin: %d\n", pin);
-    if (pinDriverSet.size() != 0)
+
+    for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
     {
-        //Serial.printf("GetPinDriver: pinDriverSet.size(): %d\n", pinDriverSet.size());
-        auto it = pinDriverSet.find(pin);
-        if (it != pinDriverSet.end())
+        if (it->second.beg <= pin && pin <= it->second.end)
         {
-            //Serial.printf("GetPinDriver: pinDriver: %s\n", it->second.pinDriver->GetPinDriverName().c_str());
             return it->second;
         }
     }

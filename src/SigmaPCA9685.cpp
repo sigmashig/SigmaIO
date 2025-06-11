@@ -37,7 +37,7 @@ IOError SigmaPCA9685IO::DigitalWrite(uint pin, byte value)
 
 bool SigmaPCA9685IO::SetPwm(uint pin, uint value)
 {
-    uint normalizedValue = NormalizePwmValue(value, 12, 0, 0x0FFF);
+    uint normalizedValue = NormalizePwmValue(value, 0, 0x0FFF);
     //Serial.printf("SetPwm: pin: %d, value: %d, normalizedValue: %d\n", pin, value, normalizedValue);
     if (pca9685->setPWM(pin, normalizedValue) == 0)
     {
@@ -51,7 +51,7 @@ void SigmaPCA9685IO::AfterRegistration(PinDriverDefinition pdd)
     //Serial.println("PCA9685 after registration");
     for (int i = 0; i < 16; i++)
     {
-        SigmaIO::PinMode(i + pdd.beg, OUTPUT);
-        SigmaIO::RegisterPwmPin(i + pdd.beg, 0, 12, 0, 0x0FFF);
+        //SigmaIO::PinMode(i + pdd.beg, OUTPUT);
+        SigmaIO::RegisterPwmPin(i + pdd.beg);
     }
 }

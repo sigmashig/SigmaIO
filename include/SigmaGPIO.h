@@ -14,7 +14,7 @@ public:
     bool CanBePWM(uint pin);
     IOError AnalogWrite(uint pin, uint value);
     int AnalogRead(uint pin);
-    bool RegisterPwmPin(uint pin, uint frequency = 5000, byte resolution = 7, uint minValue = 0, uint maxValue = 0xFFFF);
+    bool RegisterPwmPin(uint pin, uint frequency = 5000);
     bool UnRegisterPwmPin(uint pin);
 
     bool SetPwm(uint pin, uint value);
@@ -26,9 +26,9 @@ private:
     {
         byte number;
         uint frequency;
-        byte resolution;
-        uint minValue;
-        uint maxValue;
+        byte resolution=7;
+        uint minValue=0;
+        uint maxValue=0x7F;
     } ChannelDefinition;
     std::map<byte, ChannelDefinition> pwmChannels;
 };
