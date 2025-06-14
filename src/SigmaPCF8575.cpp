@@ -1,10 +1,18 @@
 #include "SigmaPCF8575.h"
 #include "SigmaIO.h"
-
+#include <Wire.h>
 
 SigmaPCF8575IO::SigmaPCF8575IO(byte address, TwoWire *pWire, uint sda, uint scl)
 {
-    pcf8575 = new PCF8575(pWire, address, sda, scl);
+    if (pWire == nullptr)
+    {
+        Wire.begin();
+        pcf8575 = new PCF8575(address);
+    }
+    else
+    {
+        pcf8575 = new PCF8575(pWire, address, sda, scl);
+    }
     pcf8575->begin();
     // init();
 }

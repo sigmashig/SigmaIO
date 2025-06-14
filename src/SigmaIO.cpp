@@ -226,6 +226,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvC
     std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, true, pinDriver}};
     pinRangeDriverSet.insert(newPair);
     pinDriver->AfterRegistration(newPair.second);
+
     return SIGMAIO_SUCCESS;
 }
 
