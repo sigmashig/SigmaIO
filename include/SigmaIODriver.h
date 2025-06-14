@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "SigmaIOTypes.h"
 
-class SigmaAbstractPinDriver
+class SigmaIODriver
 {
 public:
     /**

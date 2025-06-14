@@ -6,7 +6,8 @@
 void SigmaIO::init()
 {
     isInit = true;
-    RegisterPinDriver(SIGMAIO_GPIO, NULL, 0, GPIO_PIN_COUNT - 1);
+    IODriverConfig drvConfig;
+    RegisterPinDriver(SIGMAIO_GPIO, drvConfig, 0, GPIO_PIN_COUNT - 1);
     if (eventLoop == NULL)
     {
         esp_event_loop_args_t loop_args = {
@@ -23,6 +24,23 @@ void SigmaIO::init()
         }
     }
     esp_event_handler_register_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
+}
+
+SigmaIoDriver SigmaIO::driverName2Type(String driverName)
+{
+    if (driverName == "GPIO")
+    {
+        return SIGMAIO_GPIO;
+    }
+    else if (driverName == "PCF8575")
+    {
+        return SIGMAIO_PCF8575;
+    }
+    else if (driverName == "PCA9685")
+    {
+        return SIGMAIO_PCA9685;
+    }
+    return SIGMAIO_UNKNOWN;
 }
 
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
@@ -152,16 +170,14 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
     {
         PinDriverDefinition pdd = it->second;
-        if ((it->second.beg <= pinBegin && pinBegin <= it->second.end) 
-        || (it->second.beg <= pinEnd && pinEnd <= it->second.end))
+        if ((it->second.beg <= pinBegin && pinBegin <= it->second.end) || (it->second.beg <= pinEnd && pinEnd <= it->second.end))
         { // potentially found a hole. check if it is not overlapping with end
             return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
         }
     }
     return SIGMAIO_SUCCESS;
 }
-
-IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, uint pinBegin, uint numberPins)
+IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins)
 {
     if (!isInit)
     {
@@ -172,7 +188,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, ui
     {
         return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
     }
-    SigmaAbstractPinDriver *pinDriver = nullptr;
+    SigmaIODriver *pinDriver = nullptr;
     switch (driverCode)
     {
     case SIGMAIO_GPIO:
@@ -182,29 +198,21 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, ui
     }
     case SIGMAIO_PCF8575:
     {
-        I2CParams *i2cParams = (I2CParams *)drvParams;
-        if (i2cParams == nullptr)
+        I2CParams i2cParams = drvConfig.params.i2cParams;
+        if (i2cParams.pWire == nullptr)
         {
-            return SIGMAIO_ERROR_BAD_DRIVER_PARAMS;
-        }
-        if (i2cParams->pWire == nullptr)
-        {
-            pinDriver = new SigmaPCF8575IO(i2cParams->address);
+            pinDriver = new SigmaPCF8575IO(i2cParams.address);
         }
         else
         {
-            pinDriver = new SigmaPCF8575IO(i2cParams->address, i2cParams->pWire, i2cParams->sda, i2cParams->scl);
+            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.pWire, i2cParams.sda, i2cParams.scl);
         }
         break;
     }
     case SIGMAIO_PCA9685:
     {
-        I2CParams *i2cParams = (I2CParams *)drvParams;
-        if (i2cParams == nullptr)
-        {
-            return SIGMAIO_ERROR_BAD_DRIVER_PARAMS;
-        }
-        pinDriver = new SigmaPCA9685IO(i2cParams->address, 0, i2cParams->pWire);
+        I2CParams i2cParams = drvConfig.params.i2cParams;
+        pinDriver = new SigmaPCA9685IO(i2cParams.address, 0, i2cParams.pWire);
         break;
     }
     default:
@@ -221,7 +229,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, ui
     return SIGMAIO_SUCCESS;
 }
 
-IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBegin, uint numberPins)
+IOError SigmaIO::RegisterPinDriver(SigmaIODriver *pinDriver, uint pinBegin, uint numberPins)
 {
     if (!isInit)
     {
@@ -247,7 +255,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBe
     return SIGMAIO_SUCCESS;
 }
 
-IOError SigmaIO::UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver)
+IOError SigmaIO::UnregisterPinDriver(SigmaIODriver *pinDriver)
 {
     if (!isInit)
     {
@@ -462,6 +470,22 @@ PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
         }
     }
     return {0, 0, false, nullptr};
+}
+
+void SigmaIO::Create(IODriverSet ioConfigs)
+{
+    for (auto &ioCfg : ioConfigs)
+    {
+        SigmaIoDriver driverCode = driverName2Type(ioCfg.name);
+        if (driverCode != SIGMAIO_UNKNOWN)
+        {
+            RegisterPinDriver(driverCode, ioCfg, ioCfg.begin, ioCfg.end);
+        }
+        else
+        {
+            Serial.println("SigmaIO: unknown driver name: " + ioCfg.name);
+        }
+    }
 }
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)

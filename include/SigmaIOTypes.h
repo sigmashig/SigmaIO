@@ -4,20 +4,22 @@
 #include <Wire.h>
 
 class SigmaAbstractPinDriver;
+class SigmaIODriver;
 
 typedef struct PinDriverDefinition
 {
     uint beg;
     uint end;
     bool isInternal;
-    SigmaAbstractPinDriver *pinDriver;
+    SigmaIODriver *pinDriver;
 } PinDriverDefinition;
 
 typedef enum
 {
     SIGMAIO_GPIO = 0x00,
     SIGMAIO_PCF8575,
-    SIGMAIO_PCA9685
+    SIGMAIO_PCA9685,
+    SIGMAIO_UNKNOWN
 } SigmaIoDriver;
 
 typedef enum
@@ -66,3 +68,17 @@ typedef struct
     uint sda;
     uint scl;
 } I2CParams;
+
+typedef struct
+{
+    String name;
+    uint begin;
+    uint end;
+    union
+    {
+        byte reserved;
+        I2CParams i2cParams;
+    } params;
+} IODriverConfig;
+
+typedef std::vector<IODriverConfig> IODriverSet;

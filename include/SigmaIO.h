@@ -1,10 +1,10 @@
 #pragma once
 #include <Arduino.h>
-#include "SigmaAbstractPinDriver.h"
 #include <map>
 #include <esp_event.h>
 #include <SigmaGPIO.h>
 #include <Wire.h>
+#include "SigmaIODriver.h"
 
 // PinDriverDefinition is now defined in SigmaIOTypes.h
 
@@ -20,7 +20,7 @@ public:
      * @param pinBegin - begin of the pin range
      * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    static IOError RegisterPinDriver(SigmaAbstractPinDriver *pinDriver, uint pinBegin, uint numberPins = 0);
+    static IOError RegisterPinDriver(SigmaIODriver *pinDriver, uint pinBegin, uint numberPins = 0);
     /**
      * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range.
      *       This method is used for internal drivers only (GPIO, PCF8575)
@@ -28,9 +28,10 @@ public:
      * @param drvParams - pointer to the driver parameters. The type of parameters depends on the driver code
      * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    static IOError RegisterPinDriver(SigmaIoDriver driverCode, void *drvParams, uint pinBegin, uint numberPins = 0);
-    static IOError UnregisterPinDriver(SigmaAbstractPinDriver *pinDriver);
+    static IOError RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
+    static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
+    static void Create(IODriverSet ioConfigs);
 
     static IOError PinMode(uint pin, byte mode);
     static IOError DigitalWrite(uint pin, byte value);
@@ -87,4 +88,5 @@ private:
     static void processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static void checkDebounced(TimerHandle_t xTimer);
     static void init();
+    static SigmaIoDriver driverName2Type(String driverName);
 };

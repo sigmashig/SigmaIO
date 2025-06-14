@@ -1,9 +1,9 @@
 #pragma once
+#include "SigmaIODriver.h"
 #include "SigmaIOTypes.h"
-#include "SigmaAbstractPinDriver.h"
 #include <map>
 
-class SigmaGPIO : public SigmaAbstractPinDriver
+class SigmaGPIO : public SigmaIODriver
 {
 public:
     SigmaGPIO();
@@ -21,14 +21,15 @@ public:
     String GetPinDriverName() { return "SigmaGPIO"; }
     uint GetNumberOfPins() { return GPIO_PIN_COUNT; }
     void AfterRegistration(PinDriverDefinition pdd) {};
+
 private:
     typedef struct
     {
         byte number;
         uint frequency;
-        byte resolution=7;
-        uint minValue=0;
-        uint maxValue=0x7F;
+        byte resolution = 7;
+        uint minValue = 0;
+        uint maxValue = 0x7F;
     } ChannelDefinition;
     std::map<byte, ChannelDefinition> pwmChannels;
 };
