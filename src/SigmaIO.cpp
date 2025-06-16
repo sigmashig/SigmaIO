@@ -7,7 +7,7 @@ void SigmaIO::init()
 {
     isInit = true;
     IODriverConfig drvConfig;
-    RegisterPinDriver(SIGMAIO_GPIO, drvConfig, 0, GPIO_PIN_COUNT - 1);
+    RegisterPinDriver(SIGMAIO_GPIO, drvConfig, 0, GPIO_PIN_COUNT);
     if (eventLoop == NULL)
     {
         esp_event_loop_args_t loop_args = {
@@ -26,7 +26,7 @@ void SigmaIO::init()
     esp_event_handler_register_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
 }
 
-SigmaIoDriver SigmaIO::driverName2Type(String driverName)
+SigmaIoDriver SigmaIO::DriverName2Type(String driverName)
 {
     if (driverName == "GPIO")
     {
@@ -41,6 +41,23 @@ SigmaIoDriver SigmaIO::driverName2Type(String driverName)
         return SIGMAIO_PCA9685;
     }
     return SIGMAIO_UNKNOWN;
+}
+
+uint SigmaIO::GetNumberOfPins(SigmaIoDriver driverCode)
+{
+    if (driverCode == SIGMAIO_GPIO)
+    {
+        return GPIO_PIN_COUNT;
+    }
+    else if (driverCode == SIGMAIO_PCF8575)
+    {
+        return 16;
+    }
+    else if (driverCode == SIGMAIO_PCA9685)
+    {
+        return 16;
+    }
+    return 0;
 }
 
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
@@ -74,6 +91,23 @@ esp_err_t SigmaIO::SetEventLoop(esp_event_loop_handle_t _eventLoop)
     eventLoop = _eventLoop;
     esp_event_handler_register_with(_eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, &processInterrupt, NULL);
     return ESP_OK;
+}
+
+std::vector<byte> SigmaIO::ScanI2C()
+{
+    std::vector<byte> addresses;
+    Wire.begin();
+    addresses.clear();
+    for (byte address = 1; address < 127; address++)
+    {
+        Wire.beginTransmission(address);
+        uint error = Wire.endTransmission();
+        if (error == 0)
+        {
+            addresses.push_back(address);
+        }
+    }
+    return addresses;
 }
 
 IOError SigmaIO::PinMode(uint pin, byte mode)
@@ -183,6 +217,11 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvC
     {
         init();
     }
+    if (numberPins == 0)
+    {
+        numberPins = GetNumberOfPins(driverCode);
+    }
+
     IOError res = checkDriverRegistrationAbility(pinBegin, numberPins);
     if (res != SIGMAIO_SUCCESS)
     {
@@ -217,10 +256,6 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvC
     }
     default:
         return SIGMAIO_ERROR_BAD_DRIVER_CODE;
-    }
-    if (numberPins == 0)
-    {
-        numberPins = pinDriver->GetNumberOfPins();
     }
     uint pinEnd = pinBegin + numberPins - 1;
     std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, true, pinDriver}};
@@ -462,7 +497,6 @@ PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
     {
         init();
     }
-
     for (auto it = pinRangeDriverSet.begin(); it != pinRangeDriverSet.end(); it++)
     {
         if (it->second.beg <= pin && pin <= it->second.end)
@@ -477,10 +511,10 @@ void SigmaIO::Create(IODriverSet ioConfigs)
 {
     for (auto &ioCfg : ioConfigs)
     {
-        SigmaIoDriver driverCode = driverName2Type(ioCfg.name);
+        SigmaIoDriver driverCode = DriverName2Type(ioCfg.name);
         if (driverCode != SIGMAIO_UNKNOWN)
         {
-            RegisterPinDriver(driverCode, ioCfg, ioCfg.begin, ioCfg.end);
+            RegisterPinDriver(driverCode, ioCfg, ioCfg.begin);
         }
         else
         {

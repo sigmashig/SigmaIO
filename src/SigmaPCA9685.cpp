@@ -12,13 +12,13 @@ SigmaPCA9685IO::SigmaPCA9685IO(byte address, uint frequency, TwoWire *pWire)
         pca9685 = new PCA9685(address, pWire);
     }
 
-    Serial.println("PCA9685 created");
+    //Serial.println("PCA9685 created");
     if (frequency > 0)
     {
         pca9685->setFrequency(frequency);
     }
     pca9685->begin();
-    Serial.println("PCA9685 initialized");
+    //Serial.println("PCA9685 initialized");
 }
 
 SigmaPCA9685IO::~SigmaPCA9685IO()

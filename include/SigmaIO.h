@@ -68,6 +68,10 @@ public:
     static esp_event_loop_handle_t GetEventLoop() { return eventLoop; }
     static esp_event_base_t GetEventBase() { return eventBase; }
 
+    static std::vector<byte> ScanI2C();
+    static SigmaIoDriver DriverName2Type(String driverName);
+    static uint GetNumberOfPins(SigmaIoDriver driverCode);
+
 private:
     /**
      * @brief The map of pin ranges and drivers. The key is the BEGIN of pin range. The value is the driver
@@ -88,5 +92,4 @@ private:
     static void processInterrupt(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static void checkDebounced(TimerHandle_t xTimer);
     static void init();
-    static SigmaIoDriver driverName2Type(String driverName);
 };
