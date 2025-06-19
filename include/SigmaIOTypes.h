@@ -12,6 +12,7 @@ typedef struct PinDriverDefinition
     uint end;
     bool isInternal;
     SigmaIODriver *pinDriver;
+    uint pinMode;
 } PinDriverDefinition;
 
 typedef enum
@@ -67,6 +68,7 @@ typedef struct
     TwoWire *pWire;
     uint sda;
     uint scl;
+    uint isrPin;
 } I2CParams;
 
 typedef struct

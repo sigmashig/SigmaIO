@@ -34,6 +34,7 @@ public:
     static void Create(IODriverSet ioConfigs);
 
     static IOError PinMode(uint pin, byte mode);
+    static uint GetPinMode(uint pin);
     static IOError DigitalWrite(uint pin, byte value);
     static byte DigitalRead(uint pin);
 

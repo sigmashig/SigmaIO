@@ -7,7 +7,7 @@
 class SigmaPCF8575IO : public SigmaIODriver
 {
 public:
-    SigmaPCF8575IO(byte address, TwoWire *pWire = nullptr, uint sda = 0, uint scl = 0);
+    SigmaPCF8575IO(byte address, uint isrPin = 0, TwoWire *pWire = nullptr, uint sda = 0, uint scl = 0);
 
     ~SigmaPCF8575IO();
     String GetPinDriverName() { return "SigmaPCF8575IO"; }
@@ -26,4 +26,5 @@ public:
 
 private:
     PCF8575 *pcf8575;
+    uint isrPin;
 };

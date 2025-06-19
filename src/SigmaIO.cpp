@@ -129,8 +129,21 @@ IOError SigmaIO::PinMode(uint pin, byte mode)
     { // pin is not registered
         pinDriverSet.insert({pin, pdd});
     }
+    pdd.pinMode = mode;
     pdd.pinDriver->PinMode(pin - pdd.beg, mode);
     return SIGMAIO_SUCCESS;
+}
+
+uint SigmaIO::GetPinMode(uint pin)
+{
+    for (auto it = pinDriverSet.begin(); it != pinDriverSet.end(); it++)
+    {
+        if (it->first == pin)
+        {
+            return it->second.pinMode;
+        }
+    }
+    return 0;
 }
 
 IOError SigmaIO::DigitalWrite(uint pin, byte value)
@@ -240,11 +253,11 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvC
         I2CParams i2cParams = drvConfig.params.i2cParams;
         if (i2cParams.pWire == nullptr)
         {
-            pinDriver = new SigmaPCF8575IO(i2cParams.address);
+            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.isrPin);
         }
         else
         {
-            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.pWire, i2cParams.sda, i2cParams.scl);
+            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.isrPin, i2cParams.pWire, i2cParams.sda, i2cParams.scl);
         }
         break;
     }
