@@ -525,8 +525,8 @@ void SigmaIO::Create(IODriverSet ioConfigs)
     for (auto &ioCfg : ioConfigs)
     {
         SigmaIoDriver driverCode = DriverName2Type(ioCfg.name);
-        Serial.println("SigmaIO: driverCode=" + String(driverCode));
-        Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
+        //Serial.println("SigmaIO: driverCode=" + String(driverCode));
+        //Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
         if (driverCode != SIGMAIO_UNKNOWN)
         {
             RegisterPinDriver(driverCode, ioCfg, ioCfg.begin);
