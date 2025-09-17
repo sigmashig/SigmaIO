@@ -21,7 +21,7 @@ typedef enum
     SIGMAIO_PCF8575,
     SIGMAIO_PCA9685,
     SIGMAIO_UNKNOWN
-} SigmaIoDriver;
+} SigmaIoDriverCode;
 
 typedef enum
 {
@@ -44,6 +44,7 @@ typedef enum
     SIGMAIO_ERROR_INTERRUPT_ALREADY_ATTACHED,
     SIGMAIO_ERROR_INTERRUPT_NOT_ATTACHED,
     SIGMAIO_ERROR_BAD_VALUE,
+    SIGMAIO_WARNING_BAD_PWM_VALUE,
     SIGMAIO_ERROR_NOT_SUPPORTED
 } IOError;
 
@@ -81,6 +82,14 @@ typedef struct
         byte reserved;
         I2CParams i2cParams;
     } params;
+    union 
+    {
+        byte reserved;
+        struct {
+            uint frequency;
+        } pwmParams;
+    } driverParams;
+    
 } IODriverConfig;
 
 typedef std::vector<IODriverConfig> IODriverSet;

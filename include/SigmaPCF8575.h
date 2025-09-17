@@ -20,9 +20,18 @@ public:
     bool RegisterPwmPin(uint pin, uint frequency) { return false; }
     bool UnRegisterPwmPin(uint pin) { return false; };
 
-    bool SetPwm(uint pin, uint value) { return false; };
+    bool SetPwmRaw(uint pin, uint value) { return false; };
+    bool SetPwmPercent(uint pin, uint value) { return false; };
     uint GetNumberOfPins() { return 16; }
     void AfterRegistration(PinDriverDefinition pdd) {};
+    bool SetPwmUSec(uint pin, uint value) { return false; };
+    uint GetPwmFrequency(uint pin){ return 0; };
+    uint GetMinPwmFrequency(uint pin){ return 0; };
+    uint GetMaxPwmFrequency(uint pin){ return 0; };
+    uint GetPwmResolution(uint pin){ return 0; };
+    bool IsPinPWM(uint pin){ return false; };
+    uint GetMaxPwmValue(uint pin){ return 0; };
+    uint GetMinPwmValue(uint pin){ return 0; };
 
 private:
     PCF8575 *pcf8575;

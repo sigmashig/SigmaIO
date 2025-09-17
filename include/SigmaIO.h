@@ -11,9 +11,6 @@
 class SigmaIO
 {
 public:
-    // SigmaIO(bool isRegisterGPIO = true);
-    //~SigmaIO();
-    // void Begin();
     /**
      * @brief Register pin driver for the pin range. Both pinBegin and pinEnd are included to the range
      * @param pinDriver - pointer to the driver
@@ -28,7 +25,7 @@ public:
      * @param drvParams - pointer to the driver parameters. The type of parameters depends on the driver code
      * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    static IOError RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
+    static IOError RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
     static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
     static void Create(IODriverSet ioConfigs);
@@ -47,8 +44,35 @@ public:
      * @param frequency - frequency in Hz
      */
     static IOError RegisterPwmPin(uint pin, uint frequency = 5000);
+
+    /*
+     * @brief Set PWM value for the pin. The value is set 'as is'.
+     * if value > max value for pin, then maximum value will be set but SIGMAIO_WARNING_BAD_PWM_VALUE will be returned
+     * @param pin - pin number
+     * @param value - value in percentage
+     */
+    static IOError SetPwmRaw(uint pin, uint value);
+    /*
+     * @brief Set PWM value for the pin. The value is set in microseconds.
+     * if value > max period for pin, then maximum period will be set but SIGMAIO_WARNING_BAD_PWM_VALUE will be returned
+     * @param pin - pin number
+     * @param us - value in microseconds
+     */
+    static IOError SetPwmUSec(uint pin, uint us);
+    /*
+     * @brief Set PWM value for the pin. The value is set in percentage.
+     * if value > 100 for pin, then 100 will be set but SIGMAIO_WARNING_BAD_PWM_VALUE will be returned
+     * @param pin - pin number
+     * @param percent - value in percentage
+     */
+    static IOError SetPwmPercent(uint pin, uint percent);
+    /*
+     * @brief Set PWM value for the pin. The value is set in microseconds.
+     * if value > max value for pin, then maximum value will be set but SIGMAIO_WARNING_BAD_PWM_VALUE will be returned
+     * @param pin - pin number
+     * @param us - value in microseconds
+     */
     // Interrupts
-    static IOError SetPwm(uint pin, uint value);
     /**
      * @brief Attach interrupt to the pin. This method is used for registered pins only. You should register both pins: ISR and SRC
      *          pins before using. You can attach a several pins to one interrupt. This case, the event will be posted for every pin,
@@ -70,8 +94,8 @@ public:
     static esp_event_base_t GetEventBase() { return eventBase; }
 
     static std::vector<byte> ScanI2C();
-    static SigmaIoDriver DriverName2Type(String driverName);
-    static uint GetNumberOfPins(SigmaIoDriver driverCode);
+    static SigmaIoDriverCode DriverName2Type(String driverName);
+    static uint GetNumberOfPins(SigmaIoDriverCode driverCode);
 
 private:
     /**

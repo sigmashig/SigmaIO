@@ -33,9 +33,18 @@ public:
     bool RegisterPwmPin(uint pin, uint frequency = 0) { return true; };
     bool UnRegisterPwmPin(uint pin) { return true; };
 
-    bool SetPwm(uint pin, uint value);
+    bool SetPwmRaw(uint pin, uint value);
+    bool SetPwmPercent(uint pin, uint value);
     uint GetNumberOfPins() { return 16; }
     void AfterRegistration(PinDriverDefinition pdd);
+    bool SetPwmUSec(uint pin, uint value);
+    uint GetPwmFrequency(uint pin);
+    uint GetMinPwmFrequency(uint pin){ return 24; };
+    uint GetMaxPwmFrequency(uint pin){ return 1526; };
+    uint GetPwmResolution(uint pin){ return 12; };
+    bool IsPinPWM(uint pin){ return true; };
+    uint GetMaxPwmValue(uint pin){ return 0x0FFF; };
+    uint GetMinPwmValue(uint pin){ return 0; };
 
 private:
     PCA9685 *pca9685;

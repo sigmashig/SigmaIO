@@ -92,7 +92,7 @@ bool SigmaGPIO::UnRegisterPwmPin(uint pin)
     return false;
 }
 
-bool SigmaGPIO::SetPwm(uint pin, uint value)
+bool SigmaGPIO::SetPwmPercent(uint pin, uint value)
 {
     for (auto &channel : pwmChannels)
     {
@@ -101,6 +101,19 @@ bool SigmaGPIO::SetPwm(uint pin, uint value)
             uint nValue = NormalizePwmValue(value, channel.second.minValue, channel.second.maxValue);
             // Serial.printf("SetPwm: pin: %d, value: %d, nValue: %d\n", pin, value, nValue);
             ledcWrite(channel.second.number, nValue);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SigmaGPIO::SetPwmRaw(uint pin, uint value)
+{
+    for (auto &channel : pwmChannels)
+    {
+        if (channel.first == pin)
+        { // pin found.
+            ledcWrite(channel.second.number, value);
             return true;
         }
     }

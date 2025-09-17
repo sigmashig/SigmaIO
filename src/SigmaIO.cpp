@@ -26,7 +26,7 @@ void SigmaIO::init()
     esp_event_handler_register_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
 }
 
-SigmaIoDriver SigmaIO::DriverName2Type(String driverName)
+SigmaIoDriverCode SigmaIO::DriverName2Type(String driverName)
 {
     if (driverName == "GPIO")
     {
@@ -43,7 +43,7 @@ SigmaIoDriver SigmaIO::DriverName2Type(String driverName)
     return SIGMAIO_UNKNOWN;
 }
 
-uint SigmaIO::GetNumberOfPins(SigmaIoDriver driverCode)
+uint SigmaIO::GetNumberOfPins(SigmaIoDriverCode driverCode)
 {
     if (driverCode == SIGMAIO_GPIO)
     {
@@ -224,7 +224,7 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     }
     return SIGMAIO_SUCCESS;
 }
-IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins)
+IOError SigmaIO::RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins)
 {
     if (!isInit)
     {
@@ -264,7 +264,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriver driverCode, IODriverConfig drvC
     case SIGMAIO_PCA9685:
     {
         I2CParams i2cParams = drvConfig.params.i2cParams;
-        pinDriver = new SigmaPCA9685IO(i2cParams.address, 0, i2cParams.pWire);
+        pinDriver = new SigmaPCA9685IO(i2cParams.address, drvConfig.driverParams.pwmParams.frequency, i2cParams.pWire);
         break;
     }
     default:
@@ -364,24 +364,110 @@ IOError SigmaIO::RegisterPwmPin(uint pin, uint frequency)
     }
 }
 
-IOError SigmaIO::SetPwm(uint pin, uint value)
+IOError SigmaIO::SetPwmRaw(uint pin, uint value)
 {
+    IOError res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
     PinDriverDefinition pdd = GetPinDriver(pin);
     if (pdd.pinDriver != nullptr)
     {
-        if (pdd.pinDriver->SetPwm(pin - pdd.beg, value))
+        if (pdd.pinDriver->IsPinPWM(pin - pdd.beg))
         {
-            return SIGMAIO_SUCCESS;
+            if (value > pdd.pinDriver->GetMaxPwmValue(pin - pdd.beg))
+            {
+                value = pdd.pinDriver->GetMaxPwmValue(pin - pdd.beg);
+                res = SIGMAIO_WARNING_BAD_PWM_VALUE;
+            }
+
+            if (pdd.pinDriver->SetPwmRaw(pin - pdd.beg, value))
+            {
+                res = SIGMAIO_SUCCESS;
+            }
+            else
+            {
+                res = SIGMAIO_ERROR_PIN_NOT_PWM;
+            }
         }
         else
         {
-            return SIGMAIO_ERROR_PIN_NOT_PWM;
+            res = SIGMAIO_ERROR_PIN_NOT_PWM;
         }
     }
     else
     {
-        return SIGMAIO_ERROR_PIN_NOT_REGISTERED;
+        res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
     }
+    return res;
+}
+
+IOError SigmaIO::SetPwmPercent(uint pin, uint value)
+{
+    IOError res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
+    PinDriverDefinition pdd = GetPinDriver(pin);
+    if (pdd.pinDriver != nullptr)
+    {
+        if (pdd.pinDriver->IsPinPWM(pin - pdd.beg))
+        {
+            if (value > 100)
+            {
+                value = 100;
+                res = SIGMAIO_WARNING_BAD_PWM_VALUE;
+            }
+
+            if (pdd.pinDriver->SetPwmPercent(pin - pdd.beg, value))
+            {
+                res = SIGMAIO_SUCCESS;
+            }
+            else
+            {
+                res = SIGMAIO_ERROR_PIN_NOT_PWM;
+            }
+        }
+        else
+        {
+            res = SIGMAIO_ERROR_PIN_NOT_PWM;
+        }
+    }
+    else
+    {
+        res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
+    }
+    return res;
+}
+
+
+IOError SigmaIO::SetPwmUSec(uint pin, uint us)
+{
+    IOError res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
+    PinDriverDefinition pdd = GetPinDriver(pin);
+    if (pdd.pinDriver != nullptr)
+    {
+        if (pdd.pinDriver->IsPinPWM(pin - pdd.beg))
+        {
+            uint maxPeriod = 1000000 / pdd.pinDriver->GetPwmFrequency(pin - pdd.beg);
+            if (us > maxPeriod)
+            {
+                us = maxPeriod;
+                res = SIGMAIO_WARNING_BAD_PWM_VALUE;
+            }
+            if (pdd.pinDriver->SetPwmUSec(pin - pdd.beg, us))
+            {
+                res = SIGMAIO_SUCCESS;
+            }
+            else
+            {
+                res = SIGMAIO_ERROR_PIN_NOT_PWM;
+            }
+        }
+        else
+        {
+            res = SIGMAIO_ERROR_PIN_NOT_PWM;
+        }
+    }
+    else
+    {
+        res = SIGMAIO_ERROR_PIN_NOT_REGISTERED;
+    }
+    return res;
 }
 
 void SigmaIO::checkDebounced(TimerHandle_t xTimer)
@@ -524,9 +610,9 @@ void SigmaIO::Create(IODriverSet ioConfigs)
 {
     for (auto &ioCfg : ioConfigs)
     {
-        SigmaIoDriver driverCode = DriverName2Type(ioCfg.name);
-        //Serial.println("SigmaIO: driverCode=" + String(driverCode));
-        //Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
+        SigmaIoDriverCode driverCode = DriverName2Type(ioCfg.name);
+        // Serial.println("SigmaIO: driverCode=" + String(driverCode));
+        // Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
         if (driverCode != SIGMAIO_UNKNOWN)
         {
             RegisterPinDriver(driverCode, ioCfg, ioCfg.begin);

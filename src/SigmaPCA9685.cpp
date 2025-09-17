@@ -35,11 +35,20 @@ IOError SigmaPCA9685IO::DigitalWrite(uint pin, byte value)
     return SIGMAIO_ERROR_BAD_VALUE;
 }
 
-bool SigmaPCA9685IO::SetPwm(uint pin, uint value)
+bool SigmaPCA9685IO::SetPwmPercent(uint pin, uint value)
 {
     uint normalizedValue = NormalizePwmValue(value, 0, 0x0FFF);
-    // Serial.printf("SetPwm: pin: %d, value: %d, normalizedValue: %d\n", pin, value, normalizedValue);
+    Serial.printf("SetPwm: pin: %d, value: %d, normalizedValue: %d\n", pin, value, normalizedValue);
     if (pca9685->setPWM(pin, normalizedValue) == 0)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool SigmaPCA9685IO::SetPwmRaw(uint pin, uint value)
+{
+    if (pca9685->setPWM(pin, value) == 0)
     {
         return true;
     }
@@ -54,4 +63,26 @@ void SigmaPCA9685IO::AfterRegistration(PinDriverDefinition pdd)
         // SigmaIO::PinMode(i + pdd.beg, OUTPUT);
         SigmaIO::RegisterPwmPin(i + pdd.beg);
     }
+}   
+
+bool SigmaPCA9685IO::SetPwmUSec(uint pin, uint value)
+{
+    Serial.printf("SetPwmUSec: pin: %d, value: %d\n", pin, value);
+    uint maxWidth = (1.0f * 1e6f) / pca9685->getFrequency();
+    Serial.printf("maxWidth: %d\n", maxWidth);
+    uint percentValue;
+    if (value > maxWidth)
+    {
+        percentValue = 100;
+        // return false;
+    } else {
+        percentValue = value *100  / maxWidth;
+    }
+    Serial.printf("percentValue: %d\n", percentValue);
+    return SetPwmPercent(pin, percentValue);
+}
+
+uint SigmaPCA9685IO::GetPwmFrequency(uint pin)
+{
+    return pca9685->getFrequency();
 }
