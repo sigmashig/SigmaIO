@@ -21,16 +21,16 @@ public:
     String GetPinDriverName() { return "SigmaGPIO"; }
     uint GetNumberOfPins() { return GPIO_PIN_COUNT; }
     void AfterRegistration(PinDriverDefinition pdd) {};
-    //TODO: Implement these methods
-    bool SetPwmUSec(uint pin, uint value){ return false; };
-    uint GetPwmFrequency(uint pin){ return 0; };
-    uint GetMinPwmFrequency(uint pin){ return 0; };
-    uint GetMaxPwmFrequency(uint pin){ return 0; };
-    uint GetPwmResolution(uint pin){ return 0; };
-    bool IsPinPWM(uint pin){ return false; };
+
+    bool SetPwmPercent(uint pin, uint value);
     uint GetMaxPwmValue(uint pin){ return 0x7F; };
     uint GetMinPwmValue(uint pin){ return 0; };
-    bool SetPwmPercent(uint pin, uint value);
+    uint GetPwmFrequency(uint pin);
+    uint GetMinPwmFrequency(uint pin){ return 0; };
+    uint GetMaxPwmFrequency(uint pin){ return 0; };
+    bool IsPinPWM(uint pin);
+    uint GetPwmResolution(uint pin);
+    bool SetPwmUSec(uint pin, uint value);
 
 private:
     typedef struct
