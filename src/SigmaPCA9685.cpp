@@ -1,16 +1,14 @@
 #include "SigmaPCA9685.h"
 #include "SigmaIO.h"
 
-SigmaPCA9685IO::SigmaPCA9685IO(byte address, uint frequency, TwoWire *pWire)
+SigmaPCA9685IO::SigmaPCA9685IO(byte address, uint frequency, TwoWire *pWire, uint sda, uint scl)
 {
     if (pWire == nullptr)
     {
-        pca9685 = new PCA9685(address);
+        Wire.begin(sda, scl);
+        pWire = &Wire;
     }
-    else
-    {
-        pca9685 = new PCA9685(address, pWire);
-    }
+    pca9685 = new PCA9685(address, pWire);
 
     // Serial.println("PCA9685 created");
     if (frequency > 0)
@@ -63,7 +61,7 @@ void SigmaPCA9685IO::AfterRegistration(PinDriverDefinition pdd)
         // SigmaIO::PinMode(i + pdd.beg, OUTPUT);
         SigmaIO::RegisterPwmPin(i + pdd.beg);
     }
-}   
+}
 
 bool SigmaPCA9685IO::SetPwmUSec(uint pin, uint value)
 {
@@ -75,8 +73,10 @@ bool SigmaPCA9685IO::SetPwmUSec(uint pin, uint value)
     {
         percentValue = 100;
         // return false;
-    } else {
-        percentValue = value *100  / maxWidth;
+    }
+    else
+    {
+        percentValue = value * 100 / maxWidth;
     }
     Serial.printf("percentValue: %d\n", percentValue);
     return SetPwmPercent(pin, percentValue);

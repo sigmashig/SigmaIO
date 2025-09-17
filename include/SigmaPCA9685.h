@@ -7,7 +7,7 @@
 class SigmaPCA9685IO : public SigmaIODriver
 {
 public:
-    SigmaPCA9685IO(byte address, uint frequency = 0, TwoWire *pWire = nullptr);
+    SigmaPCA9685IO(byte address, uint frequency = 0, TwoWire *pWire = nullptr, uint sda = GPIO_NUM_21, uint scl = GPIO_NUM_22);
 
     ~SigmaPCA9685IO();
     String GetPinDriverName() { return "SigmaPCA9685IO"; }

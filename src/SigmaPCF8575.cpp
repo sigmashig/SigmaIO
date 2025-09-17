@@ -7,18 +7,15 @@ SigmaPCF8575IO::SigmaPCF8575IO(byte address, uint isrPin, TwoWire *pWire, uint s
     this->isrPin = isrPin;
     if (pWire == nullptr)
     {
-        Wire.begin();
-        pcf8575 = new PCF8575(address);
+        Wire.begin(sda, scl);
+        pWire = &Wire;
     }
-    else
-    {
-        pcf8575 = new PCF8575(pWire, address, sda, scl);
-    }
+    pcf8575 = new PCF8575(pWire, address, sda, scl);
     pcf8575->begin();
     if (isrPin != 0)
     {
         SigmaIO::PinMode(isrPin, INPUT_PULLUP);
-//        SigmaIO::AttachInterrupt(isrPin, isrPin, 100, FALLING);
+        //        SigmaIO::AttachInterrupt(isrPin, isrPin, 100, FALLING);
     }
 }
 

@@ -253,6 +253,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig 
         I2CParams i2cParams = drvConfig.params.i2cParams;
         if (i2cParams.pWire == nullptr)
         {
+            Wire.begin(i2cParams.sda, i2cParams.scl);
             pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.isrPin);
         }
         else
@@ -433,7 +434,6 @@ IOError SigmaIO::SetPwmPercent(uint pin, uint value)
     }
     return res;
 }
-
 
 IOError SigmaIO::SetPwmUSec(uint pin, uint us)
 {
