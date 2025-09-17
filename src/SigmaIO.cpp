@@ -7,7 +7,8 @@ void SigmaIO::init()
 {
     isInit = true;
     IODriverConfig drvConfig;
-    RegisterPinDriver(SIGMAIO_GPIO, drvConfig, 0, GPIO_PIN_COUNT);
+    drvConfig.driverCode = SIGMAIO_GPIO;
+    RegisterPinDriver(drvConfig, 0, GPIO_PIN_COUNT);
     if (eventLoop == NULL)
     {
         esp_event_loop_args_t loop_args = {
@@ -224,7 +225,7 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     }
     return SIGMAIO_SUCCESS;
 }
-IOError SigmaIO::RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins)
+IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins)
 {
     if (!isInit)
     {
@@ -232,7 +233,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig 
     }
     if (numberPins == 0)
     {
-        numberPins = GetNumberOfPins(driverCode);
+        numberPins = GetNumberOfPins(drvConfig.driverCode);
     }
 
     IOError res = checkDriverRegistrationAbility(pinBegin, numberPins);
@@ -241,7 +242,7 @@ IOError SigmaIO::RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig 
         return SIGMAIO_ERROR_PIN_RANGE_ALREADY_REGISTERED;
     }
     SigmaIODriver *pinDriver = nullptr;
-    switch (driverCode)
+    switch (drvConfig.driverCode)
     {
     case SIGMAIO_GPIO:
     {
@@ -610,16 +611,16 @@ void SigmaIO::Create(IODriverSet ioConfigs)
 {
     for (auto &ioCfg : ioConfigs)
     {
-        SigmaIoDriverCode driverCode = DriverName2Type(ioCfg.name);
+        //SigmaIoDriverCode driverCode = DriverName2Type(ioCfg.name);
         // Serial.println("SigmaIO: driverCode=" + String(driverCode));
         // Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
-        if (driverCode != SIGMAIO_UNKNOWN)
+        if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
         {
-            RegisterPinDriver(driverCode, ioCfg, ioCfg.begin);
+            RegisterPinDriver(ioCfg, ioCfg.begin);
         }
         else
         {
-            Serial.println("SigmaIO: unknown driver name: " + ioCfg.name);
+            Serial.println("SigmaIO: unknown driver code: " + String(ioCfg.driverCode));
         }
     }
 }

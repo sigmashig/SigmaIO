@@ -25,7 +25,7 @@ public:
      * @param drvParams - pointer to the driver parameters. The type of parameters depends on the driver code
      * @param numberPins - number of the pins (or 0 if driver supports a fixed numbers of pins)
      */
-    static IOError RegisterPinDriver(SigmaIoDriverCode driverCode, IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
+    static IOError RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
     static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
     static void Create(IODriverSet ioConfigs);
