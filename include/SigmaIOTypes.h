@@ -74,7 +74,6 @@ typedef struct
 
 typedef struct
 {
-    //String name;
     SigmaIoDriverCode driverCode;
     uint begin;
     uint end;
