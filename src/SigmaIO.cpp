@@ -625,7 +625,7 @@ void SigmaIO::Create(IODriverSet ioConfigs)
 {
     for (auto &ioCfg : ioConfigs)
     {
-        Serial.println("SigmaIO: driverCode=" + String(ioCfg.driverCode));
+        //Serial.println("SigmaIO: driverCode=" + String(ioCfg.driverCode));
         if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
         {
             RegisterPinDriver(ioCfg, ioCfg.begin);
@@ -635,7 +635,7 @@ void SigmaIO::Create(IODriverSet ioConfigs)
             Serial.println("SigmaIO: unknown driver code: " + String(ioCfg.driverCode));
         }
     }
-    Serial.println("SigmaIO: created");
+    //Serial.println("SigmaIO: created");
 }
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
