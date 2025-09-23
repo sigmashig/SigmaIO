@@ -61,6 +61,22 @@ uint SigmaIO::GetNumberOfPins(SigmaIoDriverCode driverCode)
     return 0;
 }
 
+BusType SigmaIO::BusTypeFromString(String busType)
+{
+    if (busType == "I2C")
+    {
+        return SIGMAIO_BUS_TYPE_I2C;
+    }
+    else if (busType == "SPI")
+    {
+        return SIGMAIO_BUS_TYPE_SPI;
+    } else if (busType == "NONE")
+    {
+        return SIGMAIO_BUS_TYPE_NONE;
+    }
+    return SIGMAIO_BUS_TYPE_UNKNOWN;
+}
+
 IOError SigmaIO::DetachInterruptAll(uint pinIsr)
 {
     for (auto itIsr : interruptMap)
@@ -251,22 +267,20 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     }
     case SIGMAIO_PCF8575:
     {
-        I2CParams i2cParams = drvConfig.params.i2cParams;
-        if (i2cParams.pWire == nullptr)
-        {
-            Wire.begin(i2cParams.sda, i2cParams.scl);
-            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.isrPin);
-        }
-        else
-        {
-            pinDriver = new SigmaPCF8575IO(i2cParams.address, i2cParams.isrPin, i2cParams.pWire, i2cParams.sda, i2cParams.scl);
-        }
+        pinDriver = new SigmaPCF8575IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.i2cDrvParams.isrPin, (TwoWire*)drvConfig.pBus);
         break;
     }
     case SIGMAIO_PCA9685:
     {
+   /*
         I2CParams i2cParams = drvConfig.params.i2cParams;
+        Serial.println("SigmaIO: PCA9685 address=" + String(i2cParams.address));
+        Serial.println("SigmaIO: PCA9685 frequency=" + String(drvConfig.driverParams.pwmParams.frequency));
+        Serial.printf("SigmaIO: PCA9685 pWire=%p \n", i2cParams.pWire);
         pinDriver = new SigmaPCA9685IO(i2cParams.address, drvConfig.driverParams.pwmParams.frequency, i2cParams.pWire);
+        Serial.printf("SigmaIO: PCA9685 pinDriver=%p\n", pinDriver);
+    */
+        pinDriver = new SigmaPCA9685IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.pwmDrvParams.frequency, (TwoWire*)drvConfig.pBus);
         break;
     }
     default:
@@ -611,9 +625,7 @@ void SigmaIO::Create(IODriverSet ioConfigs)
 {
     for (auto &ioCfg : ioConfigs)
     {
-        //SigmaIoDriverCode driverCode = DriverName2Type(ioCfg.name);
-        // Serial.println("SigmaIO: driverCode=" + String(driverCode));
-        // Serial.println("SigmaIO: ioCfg.name=" + ioCfg.name);
+        Serial.println("SigmaIO: driverCode=" + String(ioCfg.driverCode));
         if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
         {
             RegisterPinDriver(ioCfg, ioCfg.begin);
@@ -623,6 +635,7 @@ void SigmaIO::Create(IODriverSet ioConfigs)
             Serial.println("SigmaIO: unknown driver code: " + String(ioCfg.driverCode));
         }
     }
+    Serial.println("SigmaIO: created");
 }
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)

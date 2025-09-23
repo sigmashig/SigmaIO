@@ -29,7 +29,7 @@ public:
     static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
     static void Create(IODriverSet ioConfigs);
-
+    
     static IOError PinMode(uint pin, byte mode);
     static uint GetPinMode(uint pin);
     static IOError DigitalWrite(uint pin, byte value);
@@ -96,6 +96,7 @@ public:
     static std::vector<byte> ScanI2C();
     static SigmaIoDriverCode DriverName2Type(String driverName);
     static uint GetNumberOfPins(SigmaIoDriverCode driverCode);
+    static BusType BusTypeFromString(String busType);
 
 private:
     /**

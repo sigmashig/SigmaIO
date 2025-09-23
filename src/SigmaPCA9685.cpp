@@ -5,18 +5,20 @@ SigmaPCA9685IO::SigmaPCA9685IO(byte address, uint frequency, TwoWire *pWire, uin
 {
     if (pWire == nullptr)
     {
-        Wire.begin(sda, scl);
+        bool res = Wire.begin(sda, scl);
+        Serial.printf("PCA9685: Wire.begin(%d, %d) = %d\n", sda, scl, res);
         pWire = &Wire;
     }
     pca9685 = new PCA9685(address, pWire);
 
-    // Serial.println("PCA9685 created");
+    Serial.println("PCA9685 created");
     if (frequency > 0)
     {
         pca9685->setFrequency(frequency);
     }
+    Serial.printf("PCA9685: frequency=%d\n", frequency);
     pca9685->begin();
-    // Serial.println("PCA9685 initialized");
+    Serial.println("PCA9685 initialized");
 }
 
 SigmaPCA9685IO::~SigmaPCA9685IO()

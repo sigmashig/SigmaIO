@@ -63,6 +63,7 @@ typedef struct
     std::map<uint, PinValue *> pinSrcMap;
 } InterruptDescription;
 
+/*
 typedef struct
 {
     byte address;
@@ -71,25 +72,64 @@ typedef struct
     uint scl;
     uint isrPin;
 } I2CParams;
+*/
+typedef enum
+{
+    SIGMAIO_BUS_TYPE_NONE = 0,
+    SIGMAIO_BUS_TYPE_I2C,
+    SIGMAIO_BUS_TYPE_SPI,
+    SIGMAIO_BUS_TYPE_UNKNOWN
+} BusType;
+
+typedef struct
+{
+    String name;
+    BusType type;
+    uint busNumber;
+    void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
+    union
+    {
+        struct
+        {
+            uint frequency;
+            uint csPin;
+            uint misoPin;
+            uint mosiPin;
+        } spiParams;
+        struct
+        {
+            uint frequency;
+            uint sdaPin;
+            uint sclPin;
+        } i2cParams;
+    } busSpec;
+} BusConfig;
 
 typedef struct
 {
     SigmaIoDriverCode driverCode;
     uint begin;
     uint end;
+    void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
+    String busName;
+    union {
+        struct {
+            uint scsPin;
+        } spiParams;
+        struct {
+            uint address;
+        } i2cParams;
+    }busParams;
     union
     {
-        byte reserved;
-        I2CParams i2cParams;
-    } params;
-    union 
-    {
-        byte reserved;
         struct {
+            uint isrPin;
+        } i2cDrvParams;
+        struct
+        {
             uint frequency;
-        } pwmParams;
+        } pwmDrvParams;
     } driverParams;
-    
 } IODriverConfig;
 
 typedef std::vector<IODriverConfig> IODriverSet;
