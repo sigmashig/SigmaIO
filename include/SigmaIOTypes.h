@@ -45,7 +45,10 @@ typedef enum
     SIGMAIO_ERROR_INTERRUPT_NOT_ATTACHED,
     SIGMAIO_ERROR_BAD_VALUE,
     SIGMAIO_WARNING_BAD_PWM_VALUE,
-    SIGMAIO_ERROR_NOT_SUPPORTED
+    SIGMAIO_ERROR_NOT_SUPPORTED,
+    SIGMAIO_ERROR_BAD_BUS,
+    SIGMAIO_ERROR_BUS_NOT_INITIALIZED,
+    SIGMAIO_ERROR_BUS_NOT_FOUND
 } IOError;
 
 typedef struct
@@ -76,6 +79,7 @@ typedef struct
 typedef enum
 {
     SIGMAIO_BUS_TYPE_NONE = 0,
+    SIGMAIO_BUS_TYPE_GPIO,
     SIGMAIO_BUS_TYPE_I2C,
     SIGMAIO_BUS_TYPE_SPI,
     SIGMAIO_BUS_TYPE_UNKNOWN
@@ -83,26 +87,39 @@ typedef enum
 
 typedef struct
 {
+    uint frequency;
+    uint csPin;
+    uint misoPin;
+    uint mosiPin;
+} SpiParams;
+
+typedef struct
+{
+    uint frequency;
+    uint sdaPin;
+    uint sclPin;
+} I2cParams;
+
+typedef struct
+{
+    bool reserved;
+} GpioParams;
+
+typedef union
+{
+    SpiParams spiParams;
+    I2cParams i2cParams;
+    GpioParams gpioParams;
+} BusParams;
+
+typedef struct
+{
     String name;
-    BusType type;
+    BusType type = SIGMAIO_BUS_TYPE_UNKNOWN;
     uint busNumber;
     void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
-    union
-    {
-        struct
-        {
-            uint frequency;
-            uint csPin;
-            uint misoPin;
-            uint mosiPin;
-        } spiParams;
-        struct
-        {
-            uint frequency;
-            uint sdaPin;
-            uint sclPin;
-        } i2cParams;
-    } busSpec;
+    BusParams busParams;
+    //bool isInitialized = false;
 } BusConfig;
 
 typedef struct
@@ -110,19 +127,23 @@ typedef struct
     SigmaIoDriverCode driverCode;
     uint begin;
     uint end;
-    void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
+    void *pBus; // pointer to the bus. It can be Wire, SPI, etc. or nullptr for GPIO
     String busName;
-    union {
-        struct {
-            uint scsPin;
-        } spiParams;
-        struct {
-            uint address;
-        } i2cParams;
-    }busParams;
     union
     {
-        struct {
+        struct
+        {
+            uint scsPin;
+        } spiParams;
+        struct
+        {
+            uint address;
+        } i2cParams;
+    } busParams;
+    union
+    {
+        struct
+        {
             uint isrPin;
         } i2cDrvParams;
         struct
@@ -133,3 +154,4 @@ typedef struct
 } IODriverConfig;
 
 typedef std::vector<IODriverConfig> IODriverSet;
+typedef std::vector<BusConfig> BusSet;

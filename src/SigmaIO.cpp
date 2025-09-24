@@ -7,6 +7,7 @@ void SigmaIO::init()
 {
     isInit = true;
     IODriverConfig drvConfig;
+    busMap.clear();
     drvConfig.driverCode = SIGMAIO_GPIO;
     RegisterPinDriver(drvConfig, 0, GPIO_PIN_COUNT);
     if (eventLoop == NULL)
@@ -70,7 +71,8 @@ BusType SigmaIO::BusTypeFromString(String busType)
     else if (busType == "SPI")
     {
         return SIGMAIO_BUS_TYPE_SPI;
-    } else if (busType == "NONE")
+    }
+    else if (busType == "NONE")
     {
         return SIGMAIO_BUS_TYPE_NONE;
     }
@@ -241,6 +243,9 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     }
     return SIGMAIO_SUCCESS;
 }
+
+
+
 IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins)
 {
     if (!isInit)
@@ -267,31 +272,31 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     }
     case SIGMAIO_PCF8575:
     {
-        pinDriver = new SigmaPCF8575IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.i2cDrvParams.isrPin, (TwoWire*)drvConfig.pBus);
+        BusConfig busCfg = GetBus(drvConfig.busName);
+        if (busCfg.type != drvConfig.driverCode)
+        { //Bus is not registered yet
+            return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
+        }
+        drvConfig.pBus = busCfg.pBus;
+
+        pinDriver = new SigmaPCF8575IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.i2cDrvParams.isrPin, (TwoWire *)drvConfig.pBus);
         break;
     }
     case SIGMAIO_PCA9685:
     {
-   /*
-        I2CParams i2cParams = drvConfig.params.i2cParams;
-        Serial.println("SigmaIO: PCA9685 address=" + String(i2cParams.address));
-        Serial.println("SigmaIO: PCA9685 frequency=" + String(drvConfig.driverParams.pwmParams.frequency));
-        Serial.printf("SigmaIO: PCA9685 pWire=%p \n", i2cParams.pWire);
-        pinDriver = new SigmaPCA9685IO(i2cParams.address, drvConfig.driverParams.pwmParams.frequency, i2cParams.pWire);
-        Serial.printf("SigmaIO: PCA9685 pinDriver=%p\n", pinDriver);
-    */
-        pinDriver = new SigmaPCA9685IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.pwmDrvParams.frequency, (TwoWire*)drvConfig.pBus);
+        BusConfig busCfg = GetBus(drvConfig.busName);
+        if (busCfg.type != drvConfig.driverCode)
+        { //Bus is not registered yet
+            return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
+        }
+        drvConfig.pBus = busCfg.pBus;
+        pinDriver = new SigmaPCA9685IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.pwmDrvParams.frequency, (TwoWire *)drvConfig.pBus);
         break;
     }
     default:
         return SIGMAIO_ERROR_BAD_DRIVER_CODE;
     }
-    uint pinEnd = pinBegin + numberPins - 1;
-    std::pair<int, PinDriverDefinition> newPair = {pinBegin, {pinBegin, pinEnd, true, pinDriver}};
-    pinRangeDriverSet.insert(newPair);
-    pinDriver->AfterRegistration(newPair.second);
-
-    return SIGMAIO_SUCCESS;
+    return RegisterPinDriver(pinDriver, pinBegin, numberPins);
 }
 
 IOError SigmaIO::RegisterPinDriver(SigmaIODriver *pinDriver, uint pinBegin, uint numberPins)
@@ -621,21 +626,118 @@ PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
     return {0, 0, false, nullptr};
 }
 
-void SigmaIO::Create(IODriverSet ioConfigs)
+
+IOError SigmaIO::CreateBus(BusConfig busConfig)
 {
-    for (auto &ioCfg : ioConfigs)
+    if (!isInit)
     {
-        //Serial.println("SigmaIO: driverCode=" + String(ioCfg.driverCode));
-        if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
+        init();
+    }
+
+    IOError res = SIGMAIO_SUCCESS;
+    switch (busConfig.type)
+    {
+    case SIGMAIO_BUS_TYPE_GPIO:
+    case SIGMAIO_BUS_TYPE_NONE:
+        busConfig.pBus = nullptr;
+        res = SIGMAIO_SUCCESS;
+        break;
+    case SIGMAIO_BUS_TYPE_I2C:
+    {
+        BusConfig busCfg = GetBus(busConfig.name);
+        if (busCfg.type != SIGMAIO_BUS_TYPE_I2C)
         {
-            RegisterPinDriver(ioCfg, ioCfg.begin);
+            busConfig.pBus = new TwoWire(busConfig.busNumber);
+            if (busConfig.pBus != nullptr)
+            {
+                if (((TwoWire *)busConfig.pBus)->begin(busConfig.busParams.i2cParams.sdaPin, busConfig.busParams.i2cParams.sclPin, busConfig.busParams.i2cParams.frequency))
+                {
+                    res = SIGMAIO_SUCCESS;
+                    busMap[busConfig.name] = busConfig;
+                }
+                else
+                {
+                    res = SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
+                }
+            }
+            else
+            {
+                res = SIGMAIO_ERROR_BAD_BUS;
+            }
         }
         else
         {
-            Serial.println("SigmaIO: unknown driver code: " + String(ioCfg.driverCode));
+            busConfig.pBus = busCfg.pBus;
+            res = SIGMAIO_SUCCESS;
+        }
+        break;
+    }
+    case SIGMAIO_BUS_TYPE_SPI:
+    {
+        // TODO: Implement SPI bus creation
+        res = SIGMAIO_ERROR_NOT_SUPPORTED;
+        break;
+    }
+    case SIGMAIO_BUS_TYPE_UNKNOWN:
+    {
+        res = SIGMAIO_ERROR_BAD_BUS;
+        break;
+    }
+    }
+    return res;
+}
+
+IOError SigmaIO::CreateBuses(BusSet buses)
+{
+    if (!isInit)
+    {
+        init();
+    }
+
+    IOError res = SIGMAIO_SUCCESS;
+    for (auto &busCfg : buses)
+    {
+        res = CreateBus(busCfg);
+        if (res != SIGMAIO_SUCCESS)
+        {
+            return res;
         }
     }
-    //Serial.println("SigmaIO: created");
+    return res;
+}
+
+BusConfig SigmaIO::GetBus(String busName)
+{
+    if (!isInit)
+    {
+        init();
+    }
+
+    auto it = busMap.find(busName);
+    if (it != busMap.end())
+    {
+        return it->second;
+    }
+    return BusConfig();
+}
+
+IOError SigmaIO::CreateDrivers(IODriverSet ioConfigs)
+{
+    if (!isInit)
+    {
+        init();
+    }
+
+    IOError res = SIGMAIO_SUCCESS;
+    for (auto &ioCfg : ioConfigs)
+    {
+        res = RegisterPinDriver(ioCfg, ioCfg.begin, ioCfg.end - ioCfg.begin + 1);
+        if (res != SIGMAIO_SUCCESS)
+        {
+            return res;
+        }
+    }
+    return res;
 }
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)

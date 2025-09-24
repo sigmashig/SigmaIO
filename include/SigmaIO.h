@@ -28,8 +28,12 @@ public:
     static IOError RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
     static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
-    static void Create(IODriverSet ioConfigs);
-    
+    static IOError CreateDrivers(IODriverSet ioConfigs);
+    //static IOError CreateDriver(IODriverConfig ioConfig);
+    static IOError CreateBus(BusConfig busConfig);
+    static IOError CreateBuses(BusSet buses);
+    static BusConfig GetBus(String busName);
+
     static IOError PinMode(uint pin, byte mode);
     static uint GetPinMode(uint pin);
     static IOError DigitalWrite(uint pin, byte value);
@@ -112,6 +116,7 @@ private:
     inline static esp_event_loop_handle_t eventLoop = NULL;
     inline static bool isInit = false;
     inline static std::map<uint, InterruptDescription *> interruptMap;
+    inline static std::map<String, BusConfig> busMap;
 
     static IOError checkDriverRegistrationAbility(uint pinBegin, uint numberPins);
     static void processISR(void *arg);
