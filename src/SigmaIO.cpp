@@ -273,7 +273,7 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     case SIGMAIO_PCF8575:
     {
         BusConfig busCfg = GetBus(drvConfig.busName);
-        if (busCfg.type != drvConfig.driverCode)
+        if (busCfg.type != SIGMAIO_BUS_TYPE_I2C)
         { //Bus is not registered yet
             return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
         }
@@ -285,7 +285,7 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     case SIGMAIO_PCA9685:
     {
         BusConfig busCfg = GetBus(drvConfig.busName);
-        if (busCfg.type != drvConfig.driverCode)
+        if (busCfg.type != SIGMAIO_BUS_TYPE_I2C)
         { //Bus is not registered yet
             return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
         }

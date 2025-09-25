@@ -103,7 +103,6 @@ bool SigmaGPIO::SetPwmPercent(uint pin, uint value)
                 value = 100;
             }
             uint nValue = NormalizePwmValue(value, channel.second.minValue, channel.second.maxValue);
-            // Serial.printf("SetPwm: pin: %d, value: %d, nValue: %d\n", pin, value, nValue);
             ledcWrite(channel.second.number, nValue);
             return true;
         }

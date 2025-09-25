@@ -41,7 +41,6 @@ void SigmaPCF8575IO::PinMode(uint pin, byte mode)
 
 IOError SigmaPCF8575IO::DigitalWrite(uint pin, byte value)
 {
-    // Serial.printf("DigitalWrite: pin: %d, value: %d\n", pin, value);
     if (pcf8575->digitalWrite(pin, value))
     {
         return SIGMAIO_SUCCESS;
