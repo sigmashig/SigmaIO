@@ -7,8 +7,8 @@ void SigmaIO::init()
 {
     isInit = true;
     IODriverConfig drvConfig;
-    busMap.clear();
     drvConfig.driverCode = SIGMAIO_GPIO;
+    busMap.clear();
     RegisterPinDriver(drvConfig, 0, GPIO_PIN_COUNT);
     if (eventLoop == NULL)
     {
@@ -75,6 +75,10 @@ BusType SigmaIO::BusTypeFromString(String busType)
     else if (busType == "NONE")
     {
         return SIGMAIO_BUS_TYPE_NONE;
+    }
+    else if (busType == "GPIO")
+    {
+        return SIGMAIO_BUS_TYPE_GPIO;
     }
     return SIGMAIO_BUS_TYPE_UNKNOWN;
 }
@@ -243,9 +247,6 @@ IOError SigmaIO::checkDriverRegistrationAbility(uint pinBegin, uint numberPins)
     }
     return SIGMAIO_SUCCESS;
 }
-
-
-
 IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins)
 {
     if (!isInit)
@@ -274,7 +275,7 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     {
         BusConfig busCfg = GetBus(drvConfig.busName);
         if (busCfg.type != SIGMAIO_BUS_TYPE_I2C)
-        { //Bus is not registered yet
+        { // Bus is not registered yet
             return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
         }
         drvConfig.pBus = busCfg.pBus;
@@ -286,10 +287,11 @@ IOError SigmaIO::RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint
     {
         BusConfig busCfg = GetBus(drvConfig.busName);
         if (busCfg.type != SIGMAIO_BUS_TYPE_I2C)
-        { //Bus is not registered yet
+        { // Bus is not registered yet
             return SIGMAIO_ERROR_BUS_NOT_INITIALIZED;
         }
         drvConfig.pBus = busCfg.pBus;
+
         pinDriver = new SigmaPCA9685IO(drvConfig.busParams.i2cParams.address, drvConfig.driverParams.pwmDrvParams.frequency, (TwoWire *)drvConfig.pBus);
         break;
     }
@@ -626,15 +628,28 @@ PinDriverDefinition SigmaIO::GetPinDriver(uint pin)
     return {0, 0, false, nullptr};
 }
 
+void SigmaIO::Create(IODriverSet ioConfigs)
+{
+    for (auto &ioCfg : ioConfigs)
+    {
+        if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
+        {
+            RegisterPinDriver(ioCfg, ioCfg.begin);
+        }
+        else
+        {
+            Serial.println("SigmaIO: unknown driver code: " + String(ioCfg.driverCode));
+        }
+    }
+}
 
 IOError SigmaIO::CreateBus(BusConfig busConfig)
 {
+    IOError res = SIGMAIO_SUCCESS;
     if (!isInit)
     {
         init();
     }
-
-    IOError res = SIGMAIO_SUCCESS;
     switch (busConfig.type)
     {
     case SIGMAIO_BUS_TYPE_GPIO:
@@ -739,6 +754,7 @@ IOError SigmaIO::CreateDrivers(IODriverSet ioConfigs)
     }
     return res;
 }
+
 
 ICACHE_RAM_ATTR void SigmaIO::processISR(void *arg)
 {

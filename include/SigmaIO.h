@@ -28,12 +28,15 @@ public:
     static IOError RegisterPinDriver(IODriverConfig drvConfig, uint pinBegin, uint numberPins = 0);
     static IOError UnregisterPinDriver(SigmaIODriver *pinDriver);
     static PinDriverDefinition GetPinDriver(uint pin);
+    static void Create(IODriverSet ioConfigs);
+
     static IOError CreateDrivers(IODriverSet ioConfigs);
     //static IOError CreateDriver(IODriverConfig ioConfig);
     static IOError CreateBus(BusConfig busConfig);
     static IOError CreateBuses(BusSet buses);
     static BusConfig GetBus(String busName);
 
+    
     static IOError PinMode(uint pin, byte mode);
     static uint GetPinMode(uint pin);
     static IOError DigitalWrite(uint pin, byte value);

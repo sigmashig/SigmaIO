@@ -85,6 +85,7 @@ typedef enum
     SIGMAIO_BUS_TYPE_UNKNOWN
 } BusType;
 
+
 typedef struct
 {
     uint frequency;
@@ -112,6 +113,8 @@ typedef union
     GpioParams gpioParams;
 } BusParams;
 
+
+
 typedef struct
 {
     String name;
@@ -119,7 +122,6 @@ typedef struct
     uint busNumber;
     void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
     BusParams busParams;
-    //bool isInitialized = false;
 } BusConfig;
 
 typedef struct
@@ -127,23 +129,19 @@ typedef struct
     SigmaIoDriverCode driverCode;
     uint begin;
     uint end;
-    void *pBus; // pointer to the bus. It can be Wire, SPI, etc. or nullptr for GPIO
+    void *pBus; // pointer to the bus. It can be Wire, SPI, etc.
     String busName;
-    union
-    {
-        struct
-        {
+    union {
+        struct {
             uint scsPin;
         } spiParams;
-        struct
-        {
+        struct {
             uint address;
         } i2cParams;
-    } busParams;
+    }busParams;
     union
     {
-        struct
-        {
+        struct {
             uint isrPin;
         } i2cDrvParams;
         struct
