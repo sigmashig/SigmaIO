@@ -1,8 +1,8 @@
 {
     "name": "SigmaIO",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "description": "ESP32 Only! This library provides an abstract layer for GPIO and some kind of port expanders. GPIO and PCF8575 are supported right now",
-    "keywords": "GPIO, PCF8575",
+    "keywords": "GPIO, PCF8575, SPI",
     "repository": {
         "type": "git",
         "url": "https://github.com/sigmashig/SigmaIO.git"

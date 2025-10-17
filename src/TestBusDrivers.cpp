@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SigmaIO.h>
 #include <SigmaIOTypes.h>
+#include <SigmaLoger.h>
 
 #define EXP_I2C_ADDRESS 0x40
 #define EXP_INITIAL_PIN_ADDRESS 60
@@ -9,13 +10,15 @@
 #define I2C_SCL GPIO_NUM_22
 
 #define PWM_PITCH 11 + EXP_INITIAL_PIN_ADDRESS
+SigmaLoger *Log;
 
 void setup()
 {
   Serial.begin(115200);
   Serial.println("--------------------------------------------");
   IOError err = SIGMAIO_SUCCESS;
-  
+  Log = new SigmaLoger(512);
+  Log->Append("TestBusDrivers.setup()").Debug();
   esp_event_loop_create_default();
   
   Serial.println("Event loop created");

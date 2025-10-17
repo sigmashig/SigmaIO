@@ -1,14 +1,17 @@
 #include "SigmaIO.h"
 #include "SigmaGPIO.h"
-#include "SigmaPCF8575.h"
-#include "SigmaPCA9685.h"
+#include <SigmaPCF8575.h>
+#include <SigmaPCA9685.h>
+#include <SigmaLoger.h>
 
+extern SigmaLoger *Log;
 void SigmaIO::init()
 {
     isInit = true;
     IODriverConfig drvConfig;
     drvConfig.driverCode = SIGMAIO_GPIO;
     busMap.clear();
+    Log->Append("SigmaIO.init()").Debug();
     RegisterPinDriver(drvConfig, 0, GPIO_PIN_COUNT);
     if (eventLoop == NULL)
     {
@@ -26,6 +29,7 @@ void SigmaIO::init()
         }
     }
     esp_event_handler_register_with(eventLoop, eventBase, SIGMAIO_EVENT_DIRTY, processInterrupt, NULL);
+    Log->Append("SigmaIO.init() - end").Debug();
 }
 
 SigmaIoDriverCode SigmaIO::DriverName2Type(String driverName)
@@ -634,7 +638,9 @@ void SigmaIO::Create(IODriverSet ioConfigs)
     {
         if (ioCfg.driverCode != SIGMAIO_UNKNOWN)
         {
+            Log->Append("Creating Pin Driver: ").Append(ioCfg.driverCode).Debug();
             RegisterPinDriver(ioCfg, ioCfg.begin);
+            Log->Append("Pin Driver created").Debug();
         }
         else
         {

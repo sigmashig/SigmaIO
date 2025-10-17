@@ -1,5 +1,5 @@
-#include "SigmaPCA9685.h"
-#include "SigmaIO.h"
+#include <SigmaPCA9685.h>
+#include <SigmaIO.h>
 
 SigmaPCA9685IO::SigmaPCA9685IO(byte address, uint frequency, TwoWire *pWire, uint sda, uint scl)
 {

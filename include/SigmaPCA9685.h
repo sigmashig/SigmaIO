@@ -1,8 +1,8 @@
 #pragma once
 #include <Arduino.h>
-#include "SigmaIOTypes.h"
+#include <SigmaIOTypes.h>
 #include <PCA9685.h>
-#include "SigmaIODriver.h"
+#include <SigmaIODriver.h>
 
 class SigmaPCA9685IO : public SigmaIODriver
 {
